@@ -428,20 +428,34 @@ section { padding: 56px 0; border-top: 1px solid var(--line); }
   padding: 13px 18px;
   border-bottom: 1px solid var(--line);
 }
-.mock__canton {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  font-family: var(--font-display);
-  font-size: 16px;
+.mock__lang {
+  display: flex;
+  gap: 2px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+}
+.mock__lang span {
+  padding: 4px 8px;
+  border-radius: 3px;
+  color: var(--ink-soft);
+}
+.mock__lang span[aria-current="true"] {
+  background: var(--sunken);
+  color: var(--ink);
   font-weight: 600;
-  letter-spacing: -.015em;
 }
-.mock__arms {
-  width: 17px; height: 21px; border-radius: 2px;
-  background: linear-gradient(to bottom, #0F5FA8 34%, #FFFFFF 34% 66%, #0F5FA8 66%);
-  border: 1px solid var(--line);
+
+/* The unofficial-prototype disclosure. It is required on every public
+   surface, in all four languages, and it may not be dismissible. */
+.mock__notice {
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--sunken);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
 }
+.mock__notice b { color: var(--ink); font-weight: 600; }
 .mock__assistant {
   display: inline-flex; align-items: center; gap: 8px;
   font-family: var(--font-display); font-size: 15px; font-weight: 600;
@@ -661,17 +675,28 @@ footer {
   <section>
     <div class="sec-head">
       <span class="eyebrow">In place</span>
-      <h2>Zug, doing its job</h2>
-      <p>The canton owns the page; Dumi is the help. Same split Alva uses, and
-         the one residents already read correctly.</p>
+      <h2>What the chat surface has to carry</h2>
+      <p>Until the Canton of Zug adopts it, Dumi is an unofficial prototype and
+         has to say so. No canton coat of arms, no canton wordmark, no design
+         that borrows official authority. The disclosure sits above the
+         transcript in all four languages and cannot be dismissed.</p>
     </div>
     <div class="mock">
       <div class="mock__bar">
-        <span class="mock__canton"><span class="mock__arms"></span> Kanton Zug</span>
         <span class="mock__assistant">
           <span class="dumi" data-state="idle" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span>
-          Dumi <em>Beta</em>
+          Dumi <em>Prototype</em>
         </span>
+        <span class="mock__lang">
+          <span aria-current="true">DE</span><span>EN</span><span>FR</span><span>IT</span>
+        </span>
+      </div>
+      <div class="mock__notice">
+        <b>Inoffizieller KI-Prototyp.</b> Nicht vom Kanton Zug betrieben oder
+        unterst&uuml;tzt. Antworten k&ouml;nnen unvollst&auml;ndig oder veraltet
+        sein. Bitte pr&uuml;fen Sie wichtige Angaben anhand der zitierten
+        offiziellen Quellen. Geben Sie keine pers&ouml;nlichen, vertraulichen,
+        medizinischen, rechtlichen oder steuerlichen Angaben ein.
       </div>
       <div class="mock__body">
         <div class="msg msg--user">
@@ -783,11 +808,11 @@ footer {
 
     <div class="fav-rows">
       <div class="fav-row fav-row--light">
-        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAC0UlEQVR4nG2Tz2tcVRTHP+e+N2/mZWY6SZtgmk4QSyuoRcFijS5KKVgQpda2QV2566IuNBsR/CN0o/4HooRAzaLG0IWLSlpdFBW0UsQY2yaaTNr8mHnv3XfvPS6m1FQ9HDgcOD++i+9H+Fc8fv6jhmkmp+K0OlGpVE4EBXV+vsx7C36z/OKnj9/a3jkvO5uDb3/4cjUdmIkrlSSu1khqVUCweY7NcmyW2zLLT/36ydSXDxxoT06lux7ZPzc0MnS02kgRMdgi4K2gKGVhKXoZe3WVG3cr2Cyflu7qmzenP8gMQH3fvpdaw82jI+NDtB/ew+6Hmgw0EzCeMi9wtuSdsau8/+QS7x34EQ1hsjDpMQAzfPLdpiqf1XeltEd3c+jRNntHWlRrESKBIssoi4JWIjw21mIwNYTgCZ7Z9uRUGnvsSdEQhRBQgACo4pwH79HgsXnB3M0Gna3bfLPSwJUOgo+7Tk/H6v3x3kaXrc4Wvy+usH5nm14vp5EmHH7mIM46vv15ia9+6HJxcZDSWvAlwTsk6JEY71/Y7tylk8SUhSUZSEnrVU4//xRnnjgAwJ56jVu/LbN2ew31HvUleEcoy+OxOreByPid5TU2O1tE1ZjR8VGGa1UGoghFGWs1iGNFXf8z3qGuRIMnDt7NChwyqjhVfBnx1x8rXPr+F/YPDwIwf+0667dWCaWF4O8fCc7Nxt4Wl+NECRoQDagY8k3HpbkrXL+xRFBleXGF3sYmqKLeQQgEVyIaLguHz1UaaXddoriBiZAoQkRAzD2bCaiCBjSEfvUe9e7P7aw+LgDps69NmMgsmChCxSDGgAgigqoigKr+o0ADIdinewsz1+6zUD9y5lOMeQMT3Vs2OyjRfmroy/f+8+y7mdf/A9PAxNkX1esFERIAEYOyQwFYhFd7V2cu/i+NABybbNS7+oqiz6lwwvSNOS+GK93UXODr6Qdw/htT8ITmIfaMQgAAAABJRU5ErkJggg==" alt=""><b>Dumi</b> Kanton Zug
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAC0UlEQVR4nG2Tz2tcVRTHP+e+N2/mZWY6SZtgmk4QSyuoRcFijS5KKVgQpda2QV2566IuNBsR/CN0o/4HooRAzaLG0IWLSlpdFBW0UsQY2yaaTNr8mHnv3XfvPS6m1FQ9HDgcOD++i+9H+Fc8fv6jhmkmp+K0OlGpVE4EBXV+vsx7C36z/OKnj9/a3jkvO5uDb3/4cjUdmIkrlSSu1khqVUCweY7NcmyW2zLLT/36ydSXDxxoT06lux7ZPzc0MnS02kgRMdgi4K2gKGVhKXoZe3WVG3cr2Cyflu7qmzenP8gMQH3fvpdaw82jI+NDtB/ew+6Hmgw0EzCeMi9wtuSdsau8/+QS7x34EQ1hsjDpMQAzfPLdpiqf1XeltEd3c+jRNntHWlRrESKBIssoi4JWIjw21mIwNYTgCZ7Z9uRUGnvsSdEQhRBQgACo4pwH79HgsXnB3M0Gna3bfLPSwJUOgo+7Tk/H6v3x3kaXrc4Wvy+usH5nm14vp5EmHH7mIM46vv15ia9+6HJxcZDSWvAlwTsk6JEY71/Y7tylk8SUhSUZSEnrVU4//xRnnjgAwJ56jVu/LbN2ew31HvUleEcoy+OxOreByPid5TU2O1tE1ZjR8VGGa1UGoghFGWs1iGNFXf8z3qGuRIMnDt7NChwyqjhVfBnx1x8rXPr+F/YPDwIwf+0667dWCaWF4O8fCc7Nxt4Wl+NECRoQDagY8k3HpbkrXL+xRFBleXGF3sYmqKLeQQgEVyIaLguHz1UaaXddoriBiZAoQkRAzD2bCaiCBjSEfvUe9e7P7aw+LgDps69NmMgsmChCxSDGgAgigqoigKr+o0ADIdinewsz1+6zUD9y5lOMeQMT3Vs2OyjRfmroy/f+8+y7mdf/A9PAxNkX1esFERIAEYOyQwFYhFd7V2cu/i+NABybbNS7+oqiz6lwwvSNOS+GK93UXODr6Qdw/htT8ITmIfaMQgAAAABJRU5ErkJggg==" alt=""><b>Dumi</b> Unofficial Zug assistant
         <small>16 px, actual size</small>
       </div>
       <div class="fav-row fav-row--dark">
-        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAC0UlEQVR4nG2Tz2tcVRTHP+e+N2/mZWY6SZtgmk4QSyuoRcFijS5KKVgQpda2QV2566IuNBsR/CN0o/4HooRAzaLG0IWLSlpdFBW0UsQY2yaaTNr8mHnv3XfvPS6m1FQ9HDgcOD++i+9H+Fc8fv6jhmkmp+K0OlGpVE4EBXV+vsx7C36z/OKnj9/a3jkvO5uDb3/4cjUdmIkrlSSu1khqVUCweY7NcmyW2zLLT/36ydSXDxxoT06lux7ZPzc0MnS02kgRMdgi4K2gKGVhKXoZe3WVG3cr2Cyflu7qmzenP8gMQH3fvpdaw82jI+NDtB/ew+6Hmgw0EzCeMi9wtuSdsau8/+QS7x34EQ1hsjDpMQAzfPLdpiqf1XeltEd3c+jRNntHWlRrESKBIssoi4JWIjw21mIwNYTgCZ7Z9uRUGnvsSdEQhRBQgACo4pwH79HgsXnB3M0Gna3bfLPSwJUOgo+7Tk/H6v3x3kaXrc4Wvy+usH5nm14vp5EmHH7mIM46vv15ia9+6HJxcZDSWvAlwTsk6JEY71/Y7tylk8SUhSUZSEnrVU4//xRnnjgAwJ56jVu/LbN2ew31HvUleEcoy+OxOreByPid5TU2O1tE1ZjR8VGGa1UGoghFGWs1iGNFXf8z3qGuRIMnDt7NChwyqjhVfBnx1x8rXPr+F/YPDwIwf+0667dWCaWF4O8fCc7Nxt4Wl+NECRoQDagY8k3HpbkrXL+xRFBleXGF3sYmqKLeQQgEVyIaLguHz1UaaXddoriBiZAoQkRAzD2bCaiCBjSEfvUe9e7P7aw+LgDps69NmMgsmChCxSDGgAgigqoigKr+o0ADIdinewsz1+6zUD9y5lOMeQMT3Vs2OyjRfmroy/f+8+y7mdf/A9PAxNkX1esFERIAEYOyQwFYhFd7V2cu/i+NABybbNS7+oqiz6lwwvSNOS+GK93UXODr6Qdw/htT8ITmIfaMQgAAAABJRU5ErkJggg==" alt=""><b>Dumi</b> Kanton Zug
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAC0UlEQVR4nG2Tz2tcVRTHP+e+N2/mZWY6SZtgmk4QSyuoRcFijS5KKVgQpda2QV2566IuNBsR/CN0o/4HooRAzaLG0IWLSlpdFBW0UsQY2yaaTNr8mHnv3XfvPS6m1FQ9HDgcOD++i+9H+Fc8fv6jhmkmp+K0OlGpVE4EBXV+vsx7C36z/OKnj9/a3jkvO5uDb3/4cjUdmIkrlSSu1khqVUCweY7NcmyW2zLLT/36ydSXDxxoT06lux7ZPzc0MnS02kgRMdgi4K2gKGVhKXoZe3WVG3cr2Cyflu7qmzenP8gMQH3fvpdaw82jI+NDtB/ew+6Hmgw0EzCeMi9wtuSdsau8/+QS7x34EQ1hsjDpMQAzfPLdpiqf1XeltEd3c+jRNntHWlRrESKBIssoi4JWIjw21mIwNYTgCZ7Z9uRUGnvsSdEQhRBQgACo4pwH79HgsXnB3M0Gna3bfLPSwJUOgo+7Tk/H6v3x3kaXrc4Wvy+usH5nm14vp5EmHH7mIM46vv15ia9+6HJxcZDSWvAlwTsk6JEY71/Y7tylk8SUhSUZSEnrVU4//xRnnjgAwJ56jVu/LbN2ew31HvUleEcoy+OxOreByPid5TU2O1tE1ZjR8VGGa1UGoghFGWs1iGNFXf8z3qGuRIMnDt7NChwyqjhVfBnx1x8rXPr+F/YPDwIwf+0667dWCaWF4O8fCc7Nxt4Wl+NECRoQDagY8k3HpbkrXL+xRFBleXGF3sYmqKLeQQgEVyIaLguHz1UaaXddoriBiZAoQkRAzD2bCaiCBjSEfvUe9e7P7aw+LgDps69NmMgsmChCxSDGgAgigqoigKr+o0ADIdinewsz1+6zUD9y5lOMeQMT3Vs2OyjRfmroy/f+8+y7mdf/A9PAxNkX1esFERIAEYOyQwFYhFd7V2cu/i+NABybbNS7+oqiz6lwwvSNOS+GK93UXODr6Qdw/htT8ITmIfaMQgAAAABJRU5ErkJggg==" alt=""><b>Dumi</b> Unofficial Zug assistant
         <small>on a dark tab strip</small>
       </div>
     </div>

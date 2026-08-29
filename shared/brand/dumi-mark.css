@@ -234,8 +234,14 @@
   color: var(--dumi-flow);
 }
 
-/* Canton on the left, assistant on the right. This is the split Alva uses
-   and the one residents expect: the authority owns the page, Dumi helps. */
+/* Canton on the left, assistant on the right: the authority owns the page and
+   Dumi only helps.
+
+   This lockup is for the case where a canton has formally adopted Dumi and
+   granted permission to carry its identity. Until then it must not be used
+   with a canton coat of arms, flag or wordmark, because that borrows official
+   authority the prototype does not have. See the public notice rules in
+   CLAUDE.md. */
 .dumi-bar {
   display: flex;
   align-items: center;
