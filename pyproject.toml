@@ -1,0 +1,117 @@
+[project]
+name = "dumi"
+version = "0.1.0"
+description = "Unofficial AI information assistant for public Canton of Zug content"
+requires-python = ">=3.11"
+
+# Runtime dependencies are pinned to compatible ranges here and locked exactly
+# in requirements.lock, which is what the container images install. See
+# docs/deployment.md for the regeneration procedure.
+dependencies = [
+    # Web application
+    "fastapi>=0.115,<0.116",
+    "uvicorn[standard]>=0.32,<0.35",
+    "jinja2>=3.1.4,<4",
+    "python-multipart>=0.0.18,<0.1",
+    "itsdangerous>=2.2,<3",
+
+    # Configuration. pydantic-settings validates the environment at startup so
+    # a misconfigured deployment fails immediately instead of at first use.
+    "pydantic>=2.9,<3",
+    "pydantic-settings>=2.6,<3",
+
+    # Database. psycopg 3 is used rather than asyncpg because it supports both
+    # sync and async from one driver, and the background workers are sync.
+    "sqlalchemy>=2.0.36,<2.1",
+    "psycopg[binary]>=3.2,<4",
+    "alembic>=1.14,<2",
+    "pgvector>=0.3.6,<0.4",
+
+    # Passwords. Argon2id, required by the brief.
+    "argon2-cffi>=23.1,<24",
+
+    # Background jobs
+    "redis>=5.2,<6",
+    "rq>=2.0,<3",
+
+    # HTTP client for the crawler and the Apertus provider
+    "httpx>=0.28,<0.29",
+
+    # Structured logging with request correlation
+    "structlog>=24.4,<25",
+]
+
+[project.optional-dependencies]
+# Ingestion extras. Separated so the web image does not need to carry the
+# extraction toolchain.
+ingest = [
+    "trafilatura>=1.12,<2",
+    "selectolax>=0.3.21,<0.4",
+    "pypdf>=5.1,<6",
+    "pdfplumber>=0.11,<0.12",
+    "python-docx>=1.1,<2",
+    "charset-normalizer>=3.4,<4",
+    "python-magic>=0.4.27,<0.5",
+    "langdetect>=1.0.9,<2",
+]
+
+# Embeddings. Self-hosted only; no external embedding service is permitted.
+embed = [
+    "sentence-transformers>=3.3,<4",
+]
+
+ocr = [
+    "pytesseract>=0.3.13,<0.4",
+    "pdf2image>=1.17,<2",
+    "Pillow>=11.0,<12",
+]
+
+dev = [
+    "pytest>=8.3,<9",
+    "pytest-asyncio>=0.24,<0.25",
+    "pytest-cov>=6.0,<7",
+    "ruff>=0.8,<0.9",
+    "mypy>=1.13,<2",
+    "types-requests",
+    "pip-audit>=2.7,<3",
+    "respx>=0.22,<0.23",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# E,F: pyflakes and pycodestyle. I: import order. B: bugbear. S: bandit
+# security rules, which matter for a system that fetches untrusted URLs and
+# handles credentials. UP: pyupgrade.
+select = ["E", "F", "I", "B", "S", "UP", "C4", "RUF"]
+ignore = [
+    "E501",   # line length is handled by the formatter
+    "B008",   # FastAPI Depends() in defaults is the documented pattern
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests legitimately use assert, and hardcode known-bad credentials in order
+# to prove the startup checks reject them.
+"tests/**" = ["S101", "S105", "S106"]
+"migrations/**" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["error::DeprecationWarning:app.*"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+exclude = ["migrations/"]
