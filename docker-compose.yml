@@ -1,0 +1,141 @@
+# Development stack for Dumi.
+#
+#   cp .env.example .env    # then fill in real values
+#   docker compose up -d
+#   docker compose run --rm app alembic upgrade head
+#   docker compose run --rm app python -m app.cli bootstrap-admin
+#
+# Apertus is NOT a service here. It runs on the developer's desktop, and the
+# containers reach it through host.docker.internal. Containerising a model
+# server that already works locally would waste GPU memory and add a copy of
+# the weights for nothing. See docs/apertus.md.
+#
+# This file is for development only. It is not a production deployment: there
+# is no TLS termination, no secret manager, no high availability, and the
+# database is not backed up. See docs/deployment.md.
+
+name: dumi
+
+services:
+  db:
+    # pgvector on top of PostgreSQL 16. Retrieval needs vector search and
+    # relational metadata in one system, so the extension ships with the
+    # database rather than as a separate service.
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set in .env}
+      # Deterministic collation, so index ordering does not depend on the
+      # host locale and behave differently between two developers' machines.
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    ports:
+      # Bound to loopback. Publishing 5432 on every interface would expose the
+      # database to the local network, and on a laptop that means the cafe
+      # wifi.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Persist the job queue, so a restart does not silently discard queued
+    # crawl and embedding work.
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  adminer:
+    # The local database interface required by section 5. It has no credentials
+    # of its own: you sign in with the database user from .env, so there is no
+    # second password to manage or leak.
+    image: adminer:4-standalone
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+      ADMINER_DESIGN: dracula
+    ports:
+      # 127.0.0.1 explicitly, never 0.0.0.0 and never the bare "8081:8080"
+      # short form, which publishes on every interface. This service must be
+      # unreachable from anywhere but this machine, and it is absent from the
+      # production compose file entirely.
+      - "${ADMINER_BIND_ADDRESS:-127.0.0.1}:${ADMINER_PORT:-8081}:8080"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      # Container-internal hostnames override whatever .env says for a host
+      # process, so the same .env works both inside and outside Docker.
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+    extra_hosts:
+      # Lets the container reach Apertus running on the developer's desktop.
+      # Set APERTUS_BASE_URL=http://host.docker.internal:11434/v1 in .env.
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # Source is mounted for reload. Storage is a named volume so uploaded
+      # documents survive a rebuild.
+      - ./app:/srv/app:ro
+      - ./migrations:/srv/migrations:ro
+      - upload_storage:/srv/storage
+    command:
+      ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  worker:
+    # Crawling, extraction, OCR and embedding. Separate from the web process so
+    # a long extraction cannot block a request, and so the two can be scaled
+    # and restarted independently.
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./app:/srv/app:ro
+      - upload_storage:/srv/storage
+    command: ["rq", "worker", "--url", "redis://redis:6379/0", "ingest", "embed", "default"]
+
+volumes:
+  db_data:
+  redis_data:
+  upload_storage:
