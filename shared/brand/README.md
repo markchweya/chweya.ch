@@ -9,8 +9,9 @@ dependencies: plain CSS custom properties.
 |---|---|
 | `dumi-tokens.css` | Palette, type and motion tokens. Load first. |
 | `dumi-mark.css` | The mark, its states, the lockups and the launcher button. |
-| `dumi-mark.svg` | Standalone mark — favicon, OG image, print, email. |
-| `preview.html` | Specimen sheet: scale, states, palette, in-context mock. |
+| `dumi-mark.svg` | Standalone animated mark — inline, `<img>`, OG image, print. |
+| `preview.html` | Specimen sheet: scale, states, palette, favicon, in-context mock. |
+| `favicon/` | The shared icon set, its two source drawings, and `build.sh`. See [its README](favicon/README.md). |
 
 ## Use it
 
@@ -86,3 +87,10 @@ Each is also exposed as a space-separated RGB triplet
 - **Public Sans** — body. Drawn for government digital services, which is the
   reason it's here rather than a generic grotesk.
 - **IBM Plex Mono** — reference numbers, token values, data.
+
+## Favicon
+
+Every canton uses the same icon set, in [`favicon/`](favicon). It is generated
+from the mark rather than hand-drawn, but it is a **separate static drawing**:
+favicons render where animation and blend modes aren't reliable, and they have
+to survive 16 pixels. Install instructions are in that folder's README.

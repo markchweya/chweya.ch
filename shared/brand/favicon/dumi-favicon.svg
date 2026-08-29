@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"
+     role="img" aria-label="Dumi">
+  <title>Dumi</title>
+  <!-- Favicon variant of the Dumi mark.
+       Deliberately NOT dumi-mark.svg: favicons render in a restricted context
+       (no animation in most browsers, blend modes unreliable) and have to hold
+       together at 16px. So this is one composed frame of the orbit, built from
+       plain alpha compositing, with the blur pulled back and the core and rim
+       pushed up until the mark still reads as a lit sphere at icon size. -->
+  <defs>
+    <radialGradient id="fBody" cx="50%" cy="14%" r="78%">
+      <stop offset="0%"   stop-color="#3288AA"/>
+      <stop offset="55%"  stop-color="#114A6C"/>
+      <stop offset="100%" stop-color="#092F47"/>
+    </radialGradient>
+
+    <radialGradient id="fIce" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#8CE8E4" stop-opacity=".95"/>
+      <stop offset="55%"  stop-color="#6FD6D2" stop-opacity=".45"/>
+      <stop offset="100%" stop-color="#6FD6D2" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="fFlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#3AA6C6" stop-opacity=".9"/>
+      <stop offset="100%" stop-color="#1E88A8" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="fSpark" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#FFC66B" stop-opacity=".95"/>
+      <stop offset="100%" stop-color="#E8A33D" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="fCore" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="34%"  stop-color="#E4FDFB" stop-opacity=".9"/>
+      <stop offset="62%"  stop-color="#6FD6D2" stop-opacity=".30"/>
+      <stop offset="100%" stop-color="#6FD6D2" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="fSheen" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#FFFFFF" stop-opacity=".5"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="fSoft" x="-45%" y="-45%" width="190%" height="190%">
+      <feGaussianBlur stdDeviation="2.1"/>
+    </filter>
+
+    <clipPath id="fClip"><circle cx="32" cy="32" r="32"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#fClip)">
+    <circle cx="32" cy="32" r="32" fill="url(#fBody)"/>
+
+    <g filter="url(#fSoft)">
+      <!-- one composed frame of the orbit: ice upper-left, flow lower-right,
+           spark upper-right -->
+      <circle cx="19" cy="21" r="16" fill="url(#fIce)"/>
+      <circle cx="46" cy="43" r="18" fill="url(#fFlow)"/>
+      <circle cx="45" cy="17" r="7"  fill="url(#fSpark)"/>
+    </g>
+
+    <!-- Still core. Tighter and brighter than in the animated mark: at 16px
+         this is the difference between a sphere and a blue dot. -->
+    <circle cx="32" cy="32" r="10.5" fill="url(#fCore)"/>
+
+    <ellipse cx="21" cy="14" rx="14" ry="9" fill="url(#fSheen)"/>
+  </g>
+
+  <circle cx="32" cy="32" r="31" fill="none" stroke="#FFFFFF" stroke-opacity=".36" stroke-width="1.6"/>
+</svg>

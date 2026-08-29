@@ -15,6 +15,7 @@ its own.
 ```
 shared/          identical for every canton
 └─ brand/        the Dumi mark, palette, type and motion tokens
+   └─ favicon/   the icon set every canton serves
 
 cantons/         one folder per canton
 └─ zug/          name, coat of arms, accent token, languages, content source
@@ -28,6 +29,7 @@ component code, that code belongs in `shared/` instead.
 | Piece | State |
 |---|---|
 | Brand — the Dumi mark | Draft 01 · see [`shared/brand`](shared/brand) |
+| Favicon set | Done · [`shared/brand/favicon`](shared/brand/favicon) |
 | Chat shell (launcher, consent gate, transcript, citations) | Not started |
 | Zug content source | Not started |
 | Accounts and sign-in | Out of scope for now |
