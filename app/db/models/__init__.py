@@ -5,7 +5,8 @@ Every model is imported here so that Alembic autogenerate and
 it to this list silently drops those tables from migrations.
 """
 
-from app.db.models.audit import AuditAction, AuditEvent, AuditOutcome, GENESIS_HASH
+from app.db.models.audit import GENESIS_HASH, AuditAction, AuditEvent, AuditOutcome
+from app.db.models.system import SettingKey, SystemSetting, get_setting, set_setting
 from app.db.models.user import ROLE_DESCRIPTIONS, Role, RoleName, User, UserRole, UserSession
 
 __all__ = [
@@ -16,7 +17,11 @@ __all__ = [
     "AuditOutcome",
     "Role",
     "RoleName",
+    "SettingKey",
+    "SystemSetting",
     "User",
     "UserRole",
     "UserSession",
+    "get_setting",
+    "set_setting",
 ]

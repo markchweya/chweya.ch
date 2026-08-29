@@ -103,6 +103,10 @@ ignore = [
 # to prove the startup checks reject them.
 "tests/**" = ["S101", "S105", "S106"]
 "migrations/**" = ["E402"]
+# AuditAction members such as PASSWORD_CHANGED are action identifiers, not
+# credentials. The rule matches on the constant name, so it cannot tell the
+# difference. Scoped to this one file so a real secret elsewhere still fails.
+"app/db/models/audit.py" = ["S105"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
