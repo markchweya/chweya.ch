@@ -1,0 +1,77 @@
+# ---------------------------------------------------------------------------
+# Secrets. Nothing in this block may ever reach the repository.
+# .env holds the real database and administrator credentials for local
+# development. Only .env.example, which contains placeholders, is tracked.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# ---------------------------------------------------------------------------
+# Ingested and generated data. Crawled pages, uploaded documents and OCR
+# output are operational data, not source. They can contain personal data and
+# must not be committed.
+# ---------------------------------------------------------------------------
+/data/
+/storage/
+/uploads/
+/var/
+*.sqlite
+*.sqlite3
+*.db
+/backups/
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+dist/
+build/
+*.egg-info/
+.tox/
+
+# ---------------------------------------------------------------------------
+# Node, for frontend tooling and accessibility test runners
+# ---------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-store/
+playwright-report/
+test-results/
+
+# ---------------------------------------------------------------------------
+# Editors and operating systems
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Local tooling scratch space
+# ---------------------------------------------------------------------------
+/tmp/
+/scratch/
