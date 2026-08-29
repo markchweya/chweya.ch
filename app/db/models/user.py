@@ -142,8 +142,13 @@ class User(Base, TimestampMixin):
         DateTime(timezone=True), nullable=True
     )
 
+    # foreign_keys is required because UserRole has two foreign keys to users:
+    # the grantee and the grantor. Without it SQLAlchemy cannot tell which one
+    # defines this relationship and refuses to configure the mapper.
     roles: Mapped[list[UserRole]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="UserRole.user_id",
     )
     sessions: Mapped[list[UserSession]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
@@ -192,6 +197,7 @@ class UserRole(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="roles", foreign_keys=[user_id])
+    granted_by: Mapped[User | None] = relationship(foreign_keys=[granted_by_id])
     role: Mapped[Role] = relationship(back_populates="users")
 
     __table_args__ = (UniqueConstraint("user_id", "role_id", name="uq_user_roles_user_id_role_id"),)
