@@ -92,7 +92,10 @@ target-version = "py311"
 # E,F: pyflakes and pycodestyle. I: import order. B: bugbear. S: bandit
 # security rules, which matter for a system that fetches untrusted URLs and
 # handles credentials. UP: pyupgrade.
-select = ["E", "F", "I", "B", "S", "UP", "C4", "RUF"]
+# BLE flags broad "except Exception". That is occasionally correct, for
+# example in a health endpoint that must report a failure rather than raise,
+# so the rule is enabled and those places carry an explicit noqa with a reason.
+select = ["E", "F", "I", "B", "S", "UP", "C4", "RUF", "BLE"]
 ignore = [
     "E501",   # line length is handled by the formatter
     "B008",   # FastAPI Depends() in defaults is the documented pattern
