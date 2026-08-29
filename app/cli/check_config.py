@@ -15,7 +15,13 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
-from app.config import Environment, Settings, get_settings
+from app.config import (
+    Environment,
+    Settings,
+    UnsafeConfiguration,
+    get_settings,
+    safe_validation_report,
+)
 
 
 def _mask(value: object) -> str:
@@ -29,12 +35,14 @@ def main(argv: list[str]) -> int:
     """Print configuration and validate it. Returns a process exit code."""
     try:
         settings = get_settings()
+    except UnsafeConfiguration as exc:
+        # Already a safe message: it names variables, never values.
+        print(exc)
+        return 2
     except ValidationError as exc:
         print("Configuration is invalid:\n")
-        for error in exc.errors():
-            location = ".".join(str(part) for part in error["loc"])
-            # error["msg"] is pydantic's message and never contains the value.
-            print(f"  {location}: {error['msg']}")
+        for line in safe_validation_report(exc):
+            print(f"  {line}")
         return 2
 
     print(f"Environment           : {settings.environment}")
@@ -76,9 +84,13 @@ def main(argv: list[str]) -> int:
     candidate["environment"] = Environment.PRODUCTION
     try:
         Settings(**candidate)
+    except UnsafeConfiguration as exc:
+        print(f"  {exc}")
+        print("\nThis configuration would be refused in production.")
+        return 1
     except ValidationError as exc:
-        for error in exc.errors():
-            print(f"  {error['msg']}")
+        for line in safe_validation_report(exc):
+            print(f"  {line}")
         print("\nThis configuration would be refused in production.")
         return 1
 

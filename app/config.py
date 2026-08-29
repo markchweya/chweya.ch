@@ -20,6 +20,39 @@ from pydantic import Field, PostgresDsn, RedisDsn, SecretStr, field_validator, m
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class UnsafeConfiguration(RuntimeError):
+    """Raised when the configuration must not be used in production.
+
+    Deliberately not a ValueError. Pydantic converts ValueError raised inside a
+    validator into a ValidationError whose message includes the entire input,
+    which for this model means the database password and the bootstrap
+    administrator password. A startup failure would then print both to stderr
+    and into the container log, which is precisely what the check exists to
+    prevent. Any other exception type propagates untouched.
+
+    This was found by the test asserting that a refusal message never contains
+    the credential it refused.
+    """
+
+
+def safe_validation_report(exc: Exception) -> list[str]:
+    """Render a pydantic ValidationError without any input values.
+
+    pydantic includes the offending input in its default string form. For this
+    model that can be a DSN containing a password, so error reporting always
+    goes through here rather than through str(exc).
+    """
+    lines: list[str] = []
+    errors = getattr(exc, "errors", None)
+    if not callable(errors):
+        return [str(exc)]
+    for error in errors():
+        location = ".".join(str(part) for part in error.get("loc", ())) or "(root)"
+        # msg is pydantic's own description and never carries the value.
+        lines.append(f"{location}: {error.get('msg', 'invalid')}")
+    return lines
+
+
 class Environment(StrEnum):
     """Deployment environment.
 
@@ -304,7 +337,7 @@ class Settings(BaseSettings):
             )
 
         if problems:
-            raise ValueError(
+            raise UnsafeConfiguration(
                 "Refusing to start in production with unsafe configuration:\n  - "
                 + "\n  - ".join(problems)
             )
