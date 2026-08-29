@@ -19,7 +19,7 @@
   --dumi-accent: rgb(var(--dumi-accent-rgb));
 
   /* --- Neutrals -----------------------------------------------------------
-     Biased slightly toward the teal so they read as chosen, not default.   */
+     Biased slightly toward the teal, so they sit with the mark.            */
   --dumi-ink:      #0E2029;
   --dumi-ink-soft: #4A6070;
   --dumi-line:     #D6E0E4;
@@ -27,7 +27,7 @@
   --dumi-ground:   #F4F7F8;
 
   /* --- Type ---------------------------------------------------------------
-     Public Sans is drawn for government digital services; Archivo carries
+     Public Sans was drawn for government digital services. Archivo carries
      the display sizes without tipping into personality.                    */
   --dumi-font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --dumi-font-body:    "Public Sans", "Helvetica Neue", Arial, sans-serif;

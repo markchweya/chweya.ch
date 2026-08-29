@@ -5,11 +5,11 @@
 #
 # Needs Chromium (rendering) and Python 3 with Pillow (cropping, ICO assembly).
 #
-# Each size is rendered independently rather than downscaled from one large
-# render, so the 16px icon gets Chromium's own gradient sampling at 16px
-# instead of a smudged resample.
+# Each size is rendered independently instead of downscaled from one large
+# render, so the small icons get Chromium's gradient sampling at their real
+# size instead of a smudge.
 #
-# Note the PAD below: headless Chromium reserves some vertical space, so a
+# Note the PAD below. Headless Chromium reserves some vertical space, so a
 # --window-size exactly equal to the target silently clips the bottom of the
 # image. Render into a taller viewport, then crop back to the top-left square.
 set -euo pipefail
@@ -64,14 +64,14 @@ Image.open('$TMP/raw.png').convert('RGBA').crop((0, 0, $size, $size)).save('$out
 }
 
 echo "Rendering..."
-# Browser tab and bookmark icons: transparent, full bleed.
+# Browser tab and bookmark icons. Transparent, full bleed.
 render 16 "$PWD/favicon-16.png" transparent 100 dumi-favicon-small.svg
 render 32 "$PWD/favicon-32.png" transparent 100
 render 48 "$PWD/favicon-48.png" transparent 100
 
-# Touch and installed-app icons: opaque and inset. iOS composites onto its own
-# ground and applies a squircle mask, so a transparent full-bleed circle would
-# show up as a circle floating on black.
+# Touch and installed-app icons. Opaque and inset, because iOS composites onto
+# its own ground and applies a squircle mask. A transparent full-bleed circle
+# would show up there as a circle floating on black.
 render 180 "$PWD/apple-touch-icon.png"  "#071F2E" 74
 render 192 "$PWD/icon-192.png"          "#071F2E" 74
 render 512 "$PWD/icon-512.png"          "#071F2E" 74

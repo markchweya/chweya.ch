@@ -1,12 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"
      role="img" aria-label="Dumi">
   <title>Dumi</title>
-  <!-- Favicon variant of the Dumi mark.
-       Deliberately NOT dumi-mark.svg: favicons render in a restricted context
-       (no animation in most browsers, blend modes unreliable) and have to hold
-       together at 16px. So this is one composed frame of the orbit, built from
-       plain alpha compositing, with the blur pulled back and the core and rim
-       pushed up until the mark still reads as a lit sphere at icon size. -->
+  <!-- Favicon cut of the Dumi mark, used from 32px up.
+       This is deliberately not dumi-mark.svg. Favicons render in a restricted
+       context, where most browsers will not animate and blend modes are
+       unreliable, and they have to hold together at icon size. So this is one
+       composed frame of the orbit built from plain alpha compositing, with the
+       blur pulled back and the core pushed up until it still reads as a lit
+       sphere when small. -->
   <defs>
     <radialGradient id="fBody" cx="50%" cy="14%" r="78%">
       <stop offset="0%"   stop-color="#3288AA"/>

@@ -1,7 +1,7 @@
 /* ==========================================================================
    Dumi — the mark
    A luminous orb with three lenses of light circulating around a still core.
-   Zero dependencies. Requires dumi-tokens.css for the palette.
+   No dependencies. Requires dumi-tokens.css for the palette.
 
    Canonical markup:
 
@@ -43,7 +43,7 @@
 }
 
 /* --- Halo ---------------------------------------------------------------
-   Sits behind the orb. Invisible at rest; carries the "listening" bloom.  */
+   Sits behind the orb. Invisible at rest, and carries the listening bloom. */
 .dumi::before {
   content: "";
   position: absolute;
@@ -88,41 +88,44 @@
    back at the end of every cycle.                                         */
 .dumi__blob {
   position: absolute;
-  inset: -28%;
+  inset: 0;
   border-radius: 50%;
   mix-blend-mode: screen;
-  filter: blur(calc(var(--dumi-size) * .10));
+  filter: blur(calc(var(--dumi-size) * .055));
   transform: rotate(var(--dumi-rest));
   will-change: transform;
   animation: dumi-orbit linear infinite;
 }
 
 .dumi__blob--a {
-  --dumi-rest: 24deg;
+  --dumi-rest: 318deg;
   animation-duration: calc(var(--dumi-orbit-a) * var(--dumi-tempo));
-  background: radial-gradient(circle at 34% 30%,
-    rgb(var(--dumi-ice-rgb) / .95) 0%,
-    rgb(var(--dumi-ice-rgb) / 0) 46%);
+  background: radial-gradient(ellipse 27% 27% at 50% 25%,
+    rgb(var(--dumi-ice-rgb) / .9) 0%,
+    rgb(var(--dumi-ice-rgb) / .42) 46%,
+    rgb(var(--dumi-ice-rgb) / 0) 100%);
 }
 
 .dumi__blob--b {
-  --dumi-rest: 190deg;
+  --dumi-rest: 146deg;
   animation-duration: calc(var(--dumi-orbit-b) * var(--dumi-tempo));
   animation-direction: reverse;
-  background: radial-gradient(circle at 68% 40%,
-    rgb(var(--dumi-flow-rgb) / 1) 0%,
-    rgb(var(--dumi-flow-rgb) / 0) 52%);
+  background: radial-gradient(ellipse 30% 30% at 50% 27%,
+    rgb(var(--dumi-flow-rgb) / .95) 0%,
+    rgb(var(--dumi-flow-rgb) / .4) 48%,
+    rgb(var(--dumi-flow-rgb) / 0) 100%);
 }
 
-/* The warm spark. Tighter and smaller than the others so the accent reads
-   as a glint rather than a fourth wash of colour — this is also the layer
-   a canton recolours, via --dumi-accent-rgb. */
+/* The warm spark. Tighter and smaller than the others, so the accent reads
+   as a glint instead of a fourth wash of colour. This is also the layer a
+   canton recolours, via --dumi-accent-rgb. */
 .dumi__blob--c {
-  --dumi-rest: 108deg;
+  --dumi-rest: 44deg;
   animation-duration: calc(var(--dumi-orbit-c) * var(--dumi-tempo));
-  background: radial-gradient(circle at 50% 26%,
-    rgb(var(--dumi-accent-rgb) / .85) 0%,
-    rgb(var(--dumi-accent-rgb) / 0) 30%);
+  background: radial-gradient(ellipse 14% 14% at 50% 24%,
+    rgb(var(--dumi-accent-rgb) / .9) 0%,
+    rgb(var(--dumi-accent-rgb) / .35) 55%,
+    rgb(var(--dumi-accent-rgb) / 0) 100%);
 }
 
 @keyframes dumi-orbit {
@@ -137,17 +140,18 @@
   inset: 0;
   border-radius: 50%;
   mix-blend-mode: screen;
-  opacity: .35;
+  opacity: .6;
   transition: opacity .45s ease;
-  background: radial-gradient(circle at 50% 50%,
-    rgb(255 255 255 / .9) 0%,
-    rgb(var(--dumi-ice-rgb) / .35) 14%,
-    transparent 34%);
+  background: radial-gradient(ellipse 17% 17% at 50% 50%,
+    rgb(255 255 255 / 1) 0%,
+    rgb(255 255 255 / .75) 28%,
+    rgb(var(--dumi-ice-rgb) / .28) 62%,
+    transparent 100%);
 }
 
 /* --- Specular highlight --------------------------------------------------
-   Static, top-left, plus a faint bounce along the bottom edge. Does the
-   whole job of making a flat disc read as a sphere.                       */
+   Static, top-left, plus a faint bounce along the bottom edge. This does
+   the whole job of making a flat disc read as a sphere.                   */
 .dumi__sheen {
   position: absolute;
   inset: 0;
@@ -163,14 +167,15 @@
 }
 
 /* ==========================================================================
-   States — the mark is the product's status indicator, so these carry
-   meaning rather than decoration.
+   States. The mark is the product's status indicator, so each of these
+   reports something true. The product has no spinner and no typing dots.
    ========================================================================== */
 
-/* Idle: slow drift. Present, not working. */
+/* Idle: slow drift. Present and waiting. */
 .dumi[data-state="idle"] { --dumi-tempo: 1; --dumi-halo: 0; }
 
-/* Listening: halo blooms, orbits barely change. Input is being captured. */
+/* Listening: halo blooms, orbits barely change. Input is being captured,
+   but nothing is being computed yet. */
 .dumi[data-state="listening"] { --dumi-tempo: .8; --dumi-halo: .85; }
 .dumi[data-state="listening"]::before {
   animation: dumi-pulse 2.4s ease-in-out infinite;
@@ -178,7 +183,7 @@
 
 /* Thinking: everything accelerates and the core lights up. */
 .dumi[data-state="thinking"] { --dumi-tempo: .26; --dumi-halo: .5; }
-.dumi[data-state="thinking"] .dumi__core { opacity: .95; }
+.dumi[data-state="thinking"] .dumi__core { opacity: 1; }
 
 @keyframes dumi-pulse {
   0%, 100% { transform: scale(1);    opacity: var(--dumi-halo); }
@@ -186,8 +191,8 @@
 }
 
 /* --- On dark surfaces ----------------------------------------------------
-   The orb is self-luminous, but its rim needs to stop dissolving into a
-   dark chat background.                                                   */
+   The orb is self-luminous, but its rim dissolves into a dark chat
+   background without this.                                                */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .dumi { --dumi-rim: rgb(255 255 255 / .28); }
 }
@@ -195,8 +200,8 @@
 
 /* --- Reduced motion ------------------------------------------------------
    Freeze the orbits at their resting angles and drop the pulse. The mark
-   still carries state, through the halo and core — both opacity, not
-   movement.                                                               */
+   still carries state through the halo and core, which change opacity
+   rather than moving.                                                     */
 @media (prefers-reduced-motion: reduce) {
   .dumi__blob { animation: none; }
   .dumi[data-state="listening"]::before { animation: none; }
@@ -229,8 +234,8 @@
   color: var(--dumi-flow);
 }
 
-/* Canton on the left, assistant on the right — the split Alva uses, and the
-   one residents expect: the authority owns the page, Dumi is only the help. */
+/* Canton on the left, assistant on the right. This is the split Alva uses
+   and the one residents expect: the authority owns the page, Dumi helps. */
 .dumi-bar {
   display: flex;
   align-items: center;

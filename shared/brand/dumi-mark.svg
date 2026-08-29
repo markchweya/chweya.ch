@@ -1,9 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"
      role="img" aria-label="Dumi">
   <title>Dumi</title>
-  <!-- Self-contained mark: works inline, as <img src>, as a favicon, and in
-       print. Animates where CSS runs; freezes to a composed frame where it
-       doesn't (email clients, PDF, favicon slots). Mirrors dumi-mark.css. -->
+  <!-- Self-contained mark. Works inline, as <img src>, and in print. It
+       animates where CSS runs and freezes to a composed frame where it does
+       not, such as email clients and PDF. Mirrors dumi-mark.css.
+       For icons use favicon/, which is drawn separately for small sizes. -->
   <defs>
     <radialGradient id="dumi-body" cx="50%" cy="18%" r="72%">
       <stop offset="0%"   stop-color="#1E88A8"/>
