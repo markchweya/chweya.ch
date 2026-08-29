@@ -219,6 +219,26 @@ class Settings(BaseSettings):
         )
 
     @property
+    def database_password(self) -> str | None:
+        """Return the password embedded in DATABASE_URL, if any.
+
+        PostgresDsn has no ``.password`` attribute; credentials are only
+        reachable through ``hosts()``. Wrapped here because the production
+        safety check depends on it, and reaching into the structure at each
+        call site is how that check silently broke once already.
+        """
+        hosts = self.database_url.hosts()
+        if not hosts:
+            return None
+        return hosts[0].get("password")
+
+    @property
+    def database_host(self) -> str | None:
+        """Return the database hostname, for diagnostics that must not print the DSN."""
+        hosts = self.database_url.hosts()
+        return hosts[0].get("host") if hosts else None
+
+    @property
     def user_agent(self) -> str:
         """The crawler User-Agent with the contact address substituted in."""
         return self.crawler_user_agent.replace("{contact}", self.crawler_contact)
@@ -249,7 +269,7 @@ class Settings(BaseSettings):
 
         # Database password, extracted from the DSN so a bootstrap value in the
         # connection string is caught too.
-        db_password = self.database_url.password
+        db_password = self.database_password
         if db_password is None or db_password == "":
             problems.append("DATABASE_URL must include a password in production")
         elif is_known_unsafe_credential(db_password):
