@@ -1,0 +1,59 @@
+/* ==========================================================================
+   Dumi — brand tokens
+   Shared across every canton. A canton folder overrides ONLY --dumi-accent
+   and the canton-specific tokens at the bottom.
+   ========================================================================== */
+
+:root {
+  /* --- Core palette -------------------------------------------------------
+     Kept as space-separated RGB triplets so any value can take an alpha:
+     rgb(var(--dumi-flow-rgb) / .4)                                         */
+  --dumi-deep-rgb:   11 59 87;    /* #0B3B57  glacier blue — orb body      */
+  --dumi-flow-rgb:   30 136 168;  /* #1E88A8  mid teal — primary light     */
+  --dumi-ice-rgb:   111 214 210;  /* #6FD6D2  pale aqua — fast highlight   */
+  --dumi-accent-rgb: 232 163 61;  /* #E8A33D  amber — warm spark           */
+
+  --dumi-deep:   rgb(var(--dumi-deep-rgb));
+  --dumi-flow:   rgb(var(--dumi-flow-rgb));
+  --dumi-ice:    rgb(var(--dumi-ice-rgb));
+  --dumi-accent: rgb(var(--dumi-accent-rgb));
+
+  /* --- Neutrals -----------------------------------------------------------
+     Biased slightly toward the teal so they read as chosen, not default.   */
+  --dumi-ink:      #0E2029;
+  --dumi-ink-soft: #4A6070;
+  --dumi-line:     #D6E0E4;
+  --dumi-surface:  #FFFFFF;
+  --dumi-ground:   #F4F7F8;
+
+  /* --- Type ---------------------------------------------------------------
+     Public Sans is drawn for government digital services; Archivo carries
+     the display sizes without tipping into personality.                    */
+  --dumi-font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --dumi-font-body:    "Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --dumi-font-mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* --- Motion -------------------------------------------------------------
+     One unitless multiplier drives every orbit in the mark. See dumi-mark.css */
+  --dumi-tempo: 1;
+
+  --dumi-radius: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --dumi-ink:      #E8F0F3;
+    --dumi-ink-soft: #93AEBC;
+    --dumi-line:     #1E3543;
+    --dumi-surface:  #0F212C;
+    --dumi-ground:   #0A1720;
+  }
+}
+
+:root[data-theme="dark"] {
+  --dumi-ink:      #E8F0F3;
+  --dumi-ink-soft: #93AEBC;
+  --dumi-line:     #1E3543;
+  --dumi-surface:  #0F212C;
+  --dumi-ground:   #0A1720;
+}

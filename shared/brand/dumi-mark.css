@@ -1,0 +1,277 @@
+/* ==========================================================================
+   Dumi — the mark
+   A luminous orb with three lenses of light circulating around a still core.
+   Zero dependencies. Requires dumi-tokens.css for the palette.
+
+   Canonical markup:
+
+     <span class="dumi" data-state="idle" role="img" aria-label="Dumi">
+       <span class="dumi__orb">
+         <i class="dumi__blob dumi__blob--a"></i>
+         <i class="dumi__blob dumi__blob--b"></i>
+         <i class="dumi__blob dumi__blob--c"></i>
+         <i class="dumi__core"></i>
+         <i class="dumi__sheen"></i>
+       </span>
+     </span>
+
+   Two knobs:
+     style="--dumi-size: 96px"
+     data-state="idle | listening | thinking"
+   ========================================================================== */
+
+.dumi {
+  --dumi-size: 64px;
+
+  /* Orbit periods. data-state scales all three through --dumi-tempo. */
+  --dumi-orbit-a: 13s;
+  --dumi-orbit-b: 19s;
+  --dumi-orbit-c:  9s;
+
+  --dumi-rim: rgb(255 255 255 / .5);
+  --dumi-halo: 0;
+  --dumi-tempo: 1;
+
+  position: relative;
+  display: inline-block;
+  flex: none;
+  inline-size: var(--dumi-size);
+  block-size: var(--dumi-size);
+  border-radius: 50%;
+  isolation: isolate;
+  vertical-align: middle;
+}
+
+/* --- Halo ---------------------------------------------------------------
+   Sits behind the orb. Invisible at rest; carries the "listening" bloom.  */
+.dumi::before {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgb(var(--dumi-flow-rgb) / .55) 0%,
+    rgb(var(--dumi-flow-rgb) / 0) 68%
+  );
+  opacity: var(--dumi-halo);
+  transition: opacity .4s ease;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* --- Orb body ------------------------------------------------------------ */
+.dumi__orb {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 18%,
+      rgb(var(--dumi-flow-rgb) / .85) 0%,
+      rgb(var(--dumi-deep-rgb) / 1) 62%),
+    var(--dumi-deep);
+  box-shadow:
+    inset 0 0 0 1px var(--dumi-rim),
+    inset 0 calc(var(--dumi-size) * -.14) calc(var(--dumi-size) * .22)
+      rgb(var(--dumi-deep-rgb) / .75);
+}
+
+/* --- The three circulating lenses ---------------------------------------
+   Each blob is a full-bleed layer holding one off-centre radial gradient.
+   Rotating the layer walks its bright spot around the orb, so one element
+   and one rotation buys a full orbit.
+
+   --dumi-rest is both the frozen angle under reduced motion and the phase
+   the orbit starts from, so the loop closes on itself instead of snapping
+   back at the end of every cycle.                                         */
+.dumi__blob {
+  position: absolute;
+  inset: -28%;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  filter: blur(calc(var(--dumi-size) * .10));
+  transform: rotate(var(--dumi-rest));
+  will-change: transform;
+  animation: dumi-orbit linear infinite;
+}
+
+.dumi__blob--a {
+  --dumi-rest: 24deg;
+  animation-duration: calc(var(--dumi-orbit-a) * var(--dumi-tempo));
+  background: radial-gradient(circle at 34% 30%,
+    rgb(var(--dumi-ice-rgb) / .95) 0%,
+    rgb(var(--dumi-ice-rgb) / 0) 46%);
+}
+
+.dumi__blob--b {
+  --dumi-rest: 190deg;
+  animation-duration: calc(var(--dumi-orbit-b) * var(--dumi-tempo));
+  animation-direction: reverse;
+  background: radial-gradient(circle at 68% 40%,
+    rgb(var(--dumi-flow-rgb) / 1) 0%,
+    rgb(var(--dumi-flow-rgb) / 0) 52%);
+}
+
+/* The warm spark. Tighter and smaller than the others so the accent reads
+   as a glint rather than a fourth wash of colour — this is also the layer
+   a canton recolours, via --dumi-accent-rgb. */
+.dumi__blob--c {
+  --dumi-rest: 108deg;
+  animation-duration: calc(var(--dumi-orbit-c) * var(--dumi-tempo));
+  background: radial-gradient(circle at 50% 26%,
+    rgb(var(--dumi-accent-rgb) / .85) 0%,
+    rgb(var(--dumi-accent-rgb) / 0) 30%);
+}
+
+@keyframes dumi-orbit {
+  from { transform: rotate(var(--dumi-rest)); }
+  to   { transform: rotate(calc(var(--dumi-rest) + 360deg)); }
+}
+
+/* --- Still core ----------------------------------------------------------
+   The thing the light circulates around. Brightens while thinking.        */
+.dumi__core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  opacity: .35;
+  transition: opacity .45s ease;
+  background: radial-gradient(circle at 50% 50%,
+    rgb(255 255 255 / .9) 0%,
+    rgb(var(--dumi-ice-rgb) / .35) 14%,
+    transparent 34%);
+}
+
+/* --- Specular highlight --------------------------------------------------
+   Static, top-left, plus a faint bounce along the bottom edge. Does the
+   whole job of making a flat disc read as a sphere.                       */
+.dumi__sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 46% 30% at 32% 20%,
+      rgb(255 255 255 / .55) 0%,
+      rgb(255 255 255 / 0) 100%),
+    radial-gradient(ellipse 70% 26% at 50% 104%,
+      rgb(var(--dumi-ice-rgb) / .30) 0%,
+      rgb(var(--dumi-ice-rgb) / 0) 100%);
+}
+
+/* ==========================================================================
+   States — the mark is the product's status indicator, so these carry
+   meaning rather than decoration.
+   ========================================================================== */
+
+/* Idle: slow drift. Present, not working. */
+.dumi[data-state="idle"] { --dumi-tempo: 1; --dumi-halo: 0; }
+
+/* Listening: halo blooms, orbits barely change. Input is being captured. */
+.dumi[data-state="listening"] { --dumi-tempo: .8; --dumi-halo: .85; }
+.dumi[data-state="listening"]::before {
+  animation: dumi-pulse 2.4s ease-in-out infinite;
+}
+
+/* Thinking: everything accelerates and the core lights up. */
+.dumi[data-state="thinking"] { --dumi-tempo: .26; --dumi-halo: .5; }
+.dumi[data-state="thinking"] .dumi__core { opacity: .95; }
+
+@keyframes dumi-pulse {
+  0%, 100% { transform: scale(1);    opacity: var(--dumi-halo); }
+  50%      { transform: scale(1.12); opacity: calc(var(--dumi-halo) * .45); }
+}
+
+/* --- On dark surfaces ----------------------------------------------------
+   The orb is self-luminous, but its rim needs to stop dissolving into a
+   dark chat background.                                                   */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .dumi { --dumi-rim: rgb(255 255 255 / .28); }
+}
+:root[data-theme="dark"] .dumi { --dumi-rim: rgb(255 255 255 / .28); }
+
+/* --- Reduced motion ------------------------------------------------------
+   Freeze the orbits at their resting angles and drop the pulse. The mark
+   still carries state, through the halo and core — both opacity, not
+   movement.                                                               */
+@media (prefers-reduced-motion: reduce) {
+  .dumi__blob { animation: none; }
+  .dumi[data-state="listening"]::before { animation: none; }
+}
+
+/* ==========================================================================
+   Lockups
+   ========================================================================== */
+
+.dumi-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: .5em;
+  font-family: var(--dumi-font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  color: var(--dumi-ink);
+}
+
+.dumi-lockup .dumi { --dumi-size: 1.55em; }
+
+/* "Beta", "Preview" and the like. Never competes with the name. */
+.dumi-lockup__tag {
+  font-family: var(--dumi-font-body);
+  font-size: .7em;
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--dumi-flow);
+}
+
+/* Canton on the left, assistant on the right — the split Alva uses, and the
+   one residents expect: the authority owns the page, Dumi is only the help. */
+.dumi-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: .875rem 1.25rem;
+  border-block-end: 1px solid var(--dumi-line);
+  background: var(--dumi-surface);
+}
+
+.dumi-bar__canton {
+  display: inline-flex;
+  align-items: center;
+  gap: .625rem;
+  font-family: var(--dumi-font-display);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -.015em;
+  color: var(--dumi-ink);
+}
+
+/* ==========================================================================
+   Launcher — the bottom-right entry point
+   ========================================================================== */
+
+.dumi-launcher {
+  position: fixed;
+  inset-block-end: 1.5rem;
+  inset-inline-end: 1.5rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.dumi-launcher .dumi { --dumi-size: 64px; }
+.dumi-launcher:hover .dumi { --dumi-tempo: .55; --dumi-halo: .7; }
+.dumi-launcher:focus-visible {
+  outline: 3px solid var(--dumi-flow);
+  outline-offset: 4px;
+}

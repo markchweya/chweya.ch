@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"
+     role="img" aria-label="Dumi">
+  <title>Dumi</title>
+  <!-- Self-contained mark: works inline, as <img src>, as a favicon, and in
+       print. Animates where CSS runs; freezes to a composed frame where it
+       doesn't (email clients, PDF, favicon slots). Mirrors dumi-mark.css. -->
+  <defs>
+    <radialGradient id="dumi-body" cx="50%" cy="18%" r="72%">
+      <stop offset="0%"   stop-color="#1E88A8"/>
+      <stop offset="62%"  stop-color="#0B3B57"/>
+      <stop offset="100%" stop-color="#082C42"/>
+    </radialGradient>
+
+    <radialGradient id="dumi-ice" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#6FD6D2" stop-opacity=".95"/>
+      <stop offset="100%" stop-color="#6FD6D2" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="dumi-flow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#1E88A8" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#1E88A8" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="dumi-accent" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#E8A33D" stop-opacity=".9"/>
+      <stop offset="100%" stop-color="#E8A33D" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="dumi-core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#FFFFFF" stop-opacity=".9"/>
+      <stop offset="40%"  stop-color="#6FD6D2" stop-opacity=".35"/>
+      <stop offset="100%" stop-color="#6FD6D2" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="dumi-sheen" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#FFFFFF" stop-opacity=".55"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="dumi-soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3.2"/>
+    </filter>
+
+    <clipPath id="dumi-clip"><circle cx="32" cy="32" r="32"/></clipPath>
+  </defs>
+
+  <style>
+    .dumi-svg-a, .dumi-svg-b, .dumi-svg-c {
+      transform-box: view-box;
+      transform-origin: 32px 32px;
+    }
+    .dumi-svg-a { animation: dumi-svg-a 13s linear infinite; }
+    .dumi-svg-b { animation: dumi-svg-b 19s linear infinite; }
+    .dumi-svg-c { animation: dumi-svg-c  9s linear infinite; }
+
+    @keyframes dumi-svg-a { from { transform: rotate(24deg);  } to { transform: rotate(384deg);  } }
+    @keyframes dumi-svg-b { from { transform: rotate(190deg); } to { transform: rotate(-170deg); } }
+    @keyframes dumi-svg-c { from { transform: rotate(108deg); } to { transform: rotate(468deg);  } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .dumi-svg-a, .dumi-svg-b, .dumi-svg-c { animation: none; }
+    }
+  </style>
+
+  <g clip-path="url(#dumi-clip)">
+    <circle cx="32" cy="32" r="32" fill="url(#dumi-body)"/>
+
+    <g style="mix-blend-mode:screen" filter="url(#dumi-soft)">
+      <g class="dumi-svg-a" transform="rotate(24 32 32)">
+        <circle cx="22" cy="18" r="17" fill="url(#dumi-ice)"/>
+      </g>
+      <g class="dumi-svg-b" transform="rotate(190 32 32)">
+        <circle cx="45" cy="26" r="19" fill="url(#dumi-flow)"/>
+      </g>
+      <g class="dumi-svg-c" transform="rotate(108 32 32)">
+        <circle cx="32" cy="16" r="9" fill="url(#dumi-accent)"/>
+      </g>
+    </g>
+
+    <!-- Still core -->
+    <circle cx="32" cy="32" r="11" fill="url(#dumi-core)" opacity=".35"
+            style="mix-blend-mode:screen"/>
+
+    <!-- Specular highlight -->
+    <ellipse cx="21" cy="13" rx="15" ry="10" fill="url(#dumi-sheen)"/>
+  </g>
+
+  <circle cx="32" cy="32" r="31.5" fill="none" stroke="#FFFFFF" stroke-opacity=".5"/>
+</svg>

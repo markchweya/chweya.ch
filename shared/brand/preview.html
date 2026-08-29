@@ -1,0 +1,760 @@
+<title>The Dumi Mark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+/* ========================================================================
+   PAGE
+   ======================================================================== */
+:root {
+  --ground:   #F2F6F7;
+  --surface:  #FFFFFF;
+  --sunken:   #E9F0F2;
+  --ink:      #0E2029;
+  --ink-soft: #4A6070;
+  --ink-faint:#7A93A1;
+  --line:     #DCE6EA;
+  --accent:   #14708C;
+
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body:    "Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono:    "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:   #08141C;
+    --surface:  #0E2029;
+    --sunken:   #0A1A23;
+    --ink:      #E8F0F3;
+    --ink-soft: #93AEBC;
+    --ink-faint:#6B8898;
+    --line:     #1C3341;
+    --accent:   #5FC2D9;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:   #08141C;
+  --surface:  #0E2029;
+  --sunken:   #0A1A23;
+  --ink:      #E8F0F3;
+  --ink-soft: #93AEBC;
+  --ink-faint:#6B8898;
+  --line:     #1C3341;
+  --accent:   #5FC2D9;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 28px; }
+
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ========================================================================
+   THE MARK  (verbatim from shared/brand/dumi-mark.css)
+   ======================================================================== */
+.dumi {
+  --dumi-deep-rgb:   11 59 87;
+  --dumi-flow-rgb:   30 136 168;
+  --dumi-ice-rgb:   111 214 210;
+  --dumi-accent-rgb: 232 163 61;
+
+  --dumi-size: 64px;
+  --dumi-orbit-a: 13s;
+  --dumi-orbit-b: 19s;
+  --dumi-orbit-c:  9s;
+  --dumi-rim: rgb(255 255 255 / .5);
+  --dumi-halo: 0;
+  --dumi-tempo: 1;
+
+  position: relative;
+  display: inline-block;
+  flex: none;
+  inline-size: var(--dumi-size);
+  block-size: var(--dumi-size);
+  border-radius: 50%;
+  isolation: isolate;
+  vertical-align: middle;
+}
+
+.dumi::before {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgb(var(--dumi-flow-rgb) / .55) 0%,
+    rgb(var(--dumi-flow-rgb) / 0) 68%);
+  opacity: var(--dumi-halo);
+  transition: opacity .4s ease;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.dumi__orb {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 18%,
+      rgb(var(--dumi-flow-rgb) / .85) 0%,
+      rgb(var(--dumi-deep-rgb) / 1) 62%),
+    rgb(var(--dumi-deep-rgb));
+  box-shadow:
+    inset 0 0 0 1px var(--dumi-rim),
+    inset 0 calc(var(--dumi-size) * -.14) calc(var(--dumi-size) * .22)
+      rgb(var(--dumi-deep-rgb) / .75);
+}
+
+.dumi__blob {
+  position: absolute;
+  inset: -28%;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  filter: blur(calc(var(--dumi-size) * .10));
+  transform: rotate(var(--dumi-rest));
+  will-change: transform;
+  animation: dumi-orbit linear infinite;
+}
+
+.dumi__blob--a {
+  --dumi-rest: 24deg;
+  animation-duration: calc(var(--dumi-orbit-a) * var(--dumi-tempo));
+  background: radial-gradient(circle at 34% 30%,
+    rgb(var(--dumi-ice-rgb) / .95) 0%, rgb(var(--dumi-ice-rgb) / 0) 46%);
+}
+.dumi__blob--b {
+  --dumi-rest: 190deg;
+  animation-duration: calc(var(--dumi-orbit-b) * var(--dumi-tempo));
+  animation-direction: reverse;
+  background: radial-gradient(circle at 68% 40%,
+    rgb(var(--dumi-flow-rgb) / 1) 0%, rgb(var(--dumi-flow-rgb) / 0) 52%);
+}
+.dumi__blob--c {
+  --dumi-rest: 108deg;
+  animation-duration: calc(var(--dumi-orbit-c) * var(--dumi-tempo));
+  background: radial-gradient(circle at 50% 26%,
+    rgb(var(--dumi-accent-rgb) / .85) 0%, rgb(var(--dumi-accent-rgb) / 0) 30%);
+}
+
+@keyframes dumi-orbit {
+  from { transform: rotate(var(--dumi-rest)); }
+  to   { transform: rotate(calc(var(--dumi-rest) + 360deg)); }
+}
+
+.dumi__core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  opacity: .35;
+  transition: opacity .45s ease;
+  background: radial-gradient(circle at 50% 50%,
+    rgb(255 255 255 / .9) 0%,
+    rgb(var(--dumi-ice-rgb) / .35) 14%,
+    transparent 34%);
+}
+
+.dumi__sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 46% 30% at 32% 20%,
+      rgb(255 255 255 / .55) 0%, rgb(255 255 255 / 0) 100%),
+    radial-gradient(ellipse 70% 26% at 50% 104%,
+      rgb(var(--dumi-ice-rgb) / .30) 0%, rgb(var(--dumi-ice-rgb) / 0) 100%);
+}
+
+.dumi[data-state="idle"]      { --dumi-tempo: 1;   --dumi-halo: 0; }
+.dumi[data-state="listening"] { --dumi-tempo: .8;  --dumi-halo: .85; }
+.dumi[data-state="thinking"]  { --dumi-tempo: .26; --dumi-halo: .5; }
+.dumi[data-state="listening"]::before { animation: dumi-pulse 2.4s ease-in-out infinite; }
+.dumi[data-state="thinking"] .dumi__core { opacity: .95; }
+
+@keyframes dumi-pulse {
+  0%, 100% { transform: scale(1);    opacity: var(--dumi-halo); }
+  50%      { transform: scale(1.12); opacity: calc(var(--dumi-halo) * .45); }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .dumi { --dumi-rim: rgb(255 255 255 / .28); }
+}
+:root[data-theme="dark"] .dumi { --dumi-rim: rgb(255 255 255 / .28); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dumi__blob { animation: none; }
+  .dumi[data-state="listening"]::before { animation: none; }
+}
+
+/* ========================================================================
+   TOP BAR
+   ======================================================================== */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.topbar__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+.topbar__name .dumi { --dumi-size: 26px; }
+
+/* ========================================================================
+   HERO
+   ======================================================================== */
+.hero {
+  display: grid;
+  gap: 34px;
+  justify-items: center;
+  text-align: center;
+  padding: 76px 0 68px;
+}
+.hero__mark .dumi { --dumi-size: clamp(132px, 22vw, 184px); }
+
+.hero h1 {
+  font-size: clamp(40px, 7vw, 68px);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: 1;
+}
+.hero p {
+  max-width: 46ch;
+  margin: 0;
+  font-size: clamp(16px, 2vw, 19px);
+  color: var(--ink-soft);
+}
+
+.states {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.states button {
+  padding: 9px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease;
+}
+.states button:hover { color: var(--ink); }
+.states button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--ground);
+}
+.states button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ========================================================================
+   SECTIONS
+   ======================================================================== */
+section { padding: 56px 0; border-top: 1px solid var(--line); }
+.sec-head { display: grid; gap: 8px; margin-bottom: 34px; max-width: 62ch; }
+.sec-head h2 {
+  font-size: clamp(23px, 3vw, 29px);
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+.sec-head p { margin: 0; color: var(--ink-soft); }
+
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+
+.card {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  margin-bottom: 8px;
+}
+.card p { margin: 0; font-size: 14.5px; color: var(--ink-soft); }
+
+/* --- scale ------------------------------------------------------------- */
+.scale-row {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 34px;
+  padding: 36px 28px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.scale-row + .scale-row { margin-top: 14px; background: #0B1D27; border-color: #16303D; }
+.scale-row + .scale-row .scale-item span { color: #7E9BAA; }
+
+.scale-item { display: grid; justify-items: center; gap: 12px; }
+.scale-item span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  letter-spacing: .04em;
+}
+
+/* --- states ------------------------------------------------------------ */
+.state-card { display: grid; gap: 16px; justify-items: start; }
+.state-card .dumi { --dumi-size: 72px; }
+.state-card__meta { display: grid; gap: 5px; }
+.state-card__name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* --- palette ----------------------------------------------------------- */
+.swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.swatch {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.swatch__chip { height: 92px; }
+.swatch__body { display: grid; gap: 3px; padding: 14px 16px 16px; }
+.swatch__role { font-size: 14px; font-weight: 600; }
+.swatch__hex, .swatch__var {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+/* --- context mock ------------------------------------------------------ */
+.mock {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.mock__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.mock__canton {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.015em;
+}
+.mock__arms {
+  width: 17px; height: 21px; border-radius: 2px;
+  background: linear-gradient(to bottom, #0F5FA8 34%, #FFFFFF 34% 66%, #0F5FA8 66%);
+  border: 1px solid var(--line);
+}
+.mock__assistant {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-size: 15px; font-weight: 600;
+  letter-spacing: -.015em;
+}
+.mock__assistant .dumi { --dumi-size: 22px; }
+.mock__assistant em { font-style: normal; color: var(--accent); font-weight: 500; }
+
+.mock__body { display: grid; gap: 18px; padding: 22px 18px 24px; }
+.msg { display: flex; gap: 11px; max-width: 78%; }
+.msg--user { margin-left: auto; }
+.msg--user .msg__text {
+  background: var(--sunken);
+  border-radius: 14px 14px 4px 14px;
+}
+.msg .dumi { --dumi-size: 28px; margin-top: 2px; }
+.msg__text {
+  padding: 11px 15px;
+  font-size: 15px;
+  line-height: 1.55;
+  border-radius: 14px 14px 14px 4px;
+}
+.msg--bot .msg__text { background: transparent; padding-left: 0; }
+.msg__cite {
+  display: inline-block;
+  min-width: 17px;
+  padding: 0 4px;
+  margin-left: 3px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+.chips { display: flex; flex-wrap: wrap; gap: 8px; padding-left: 39px; }
+.chip {
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  background: var(--surface);
+}
+
+/* --- accent override --------------------------------------------------- */
+.accents { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+.accent-card {
+  display: grid; gap: 13px; justify-items: center; text-align: center;
+  padding: 26px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.accent-card .dumi { --dumi-size: 66px; }
+.accent-card strong { font-size: 14.5px; font-weight: 600; }
+.accent-card code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+/* --- files ------------------------------------------------------------- */
+.files {
+  overflow-x: auto;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.files pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--ink-soft);
+}
+.files b { color: var(--ink); font-weight: 500; }
+
+footer {
+  padding: 40px 0 60px;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--ink-faint);
+}
+</style>
+
+<div class="topbar">
+  <span class="topbar__name">
+    <span class="dumi" data-state="idle" role="img" aria-label="Dumi">
+      <span class="dumi__orb">
+        <i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i>
+        <i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i>
+      </span>
+    </span>
+    Dumi
+  </span>
+  <span class="eyebrow">Identity&nbsp;·&nbsp;draft 01</span>
+</div>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="hero__mark">
+      <span class="dumi" id="heroMark" data-state="idle" role="img" aria-label="The Dumi mark">
+        <span class="dumi__orb">
+          <i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i>
+          <i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i>
+        </span>
+      </span>
+    </div>
+    <div style="display:grid;gap:16px;justify-items:center">
+      <h1>Dumi</h1>
+      <p>Three lenses of light circulating around a still core — the assistant
+         looking something up on your behalf.</p>
+    </div>
+    <div class="states" role="group" aria-label="Preview the mark's states">
+      <button type="button" data-set="idle" aria-pressed="true">Idle</button>
+      <button type="button" data-set="listening" aria-pressed="false">Listening</button>
+      <button type="button" data-set="thinking" aria-pressed="false">Thinking</button>
+    </div>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">The idea</span>
+      <h2>Circulation, not shimmer</h2>
+      <p>Alva is a soap bubble — iridescent, soft, undirected. Dumi has a centre
+         and things move around it. That difference is the whole mark.</p>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>The core stays still</h3>
+        <p>Every orbiting light returns to the same fixed point. For an assistant
+           whose one job is retrieving the right answer from canton records, a
+           mark organised around a centre says more than one that swirls.</p>
+      </div>
+      <div class="card">
+        <h3>One warm spark</h3>
+        <p>Amber, small and tight, orbiting fastest. It keeps a deep-blue
+           institutional orb from reading cold — and it is the single token a
+           canton recolours to make the mark its own.</p>
+      </div>
+      <div class="card">
+        <h3>The mark is the status</h3>
+        <p>This same element is the launcher, the message avatar and the thinking
+           indicator. So the motion is functional: tempo and core brightness
+           report what Dumi is doing, with no separate spinner.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Scale</span>
+      <h2>Legible from 24 px to hero</h2>
+      <p>The blur, rim and inner shadow are all proportional to <code>--dumi-size</code>,
+         so the sphere reading survives the whole range. 24 px is the message avatar,
+         64 px the launcher.</p>
+    </div>
+    <div class="scale-row">
+      <div class="scale-item"><span class="dumi" data-state="idle" style="--dumi-size:24px" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span><span>24</span></div>
+      <div class="scale-item"><span class="dumi" data-state="idle" style="--dumi-size:32px" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span><span>32</span></div>
+      <div class="scale-item"><span class="dumi" data-state="idle" style="--dumi-size:48px" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span><span>48</span></div>
+      <div class="scale-item"><span class="dumi" data-state="idle" style="--dumi-size:64px" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span><span>64</span></div>
+      <div class="scale-item"><span class="dumi" data-state="idle" style="--dumi-size:96px" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span><span>96</span></div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-item"><span class="dumi" data-state="idle" style="--dumi-size:24px;--dumi-rim:rgb(255 255 255/.28)" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span><span>24</span></div>
+      <div class="scale-item"><span class="dumi" data-state="idle" style="--dumi-size:32px;--dumi-rim:rgb(255 255 255/.28)" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span><span>32</span></div>
+      <div class="scale-item"><span class="dumi" data-state="idle" style="--dumi-size:48px;--dumi-rim:rgb(255 255 255/.28)" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span><span>48</span></div>
+      <div class="scale-item"><span class="dumi" data-state="idle" style="--dumi-size:64px;--dumi-rim:rgb(255 255 255/.28)" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span><span>64</span></div>
+      <div class="scale-item"><span class="dumi" data-state="idle" style="--dumi-size:96px;--dumi-rim:rgb(255 255 255/.28)" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span><span>96</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">States</span>
+      <h2>What the motion reports</h2>
+      <p>One unitless multiplier, <code>--dumi-tempo</code>, drives all three orbits.
+         Under <code>prefers-reduced-motion</code> the orbits freeze at composed
+         angles and state falls back to halo and core brightness alone.</p>
+    </div>
+    <div class="grid-3">
+      <div class="card state-card">
+        <span class="dumi" data-state="idle" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span>
+        <div class="state-card__meta">
+          <span class="state-card__name">Idle</span>
+          <h3 style="margin:0">Present, not working</h3>
+          <p>A 13-second drift you notice only if you look. This is the launcher
+             sitting in the corner of a canton page.</p>
+        </div>
+      </div>
+      <div class="card state-card">
+        <span class="dumi" data-state="listening" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span>
+        <div class="state-card__meta">
+          <span class="state-card__name">Listening</span>
+          <h3 style="margin:0">Taking your question</h3>
+          <p>The halo blooms outward while the orbits hold their pace. Growth,
+             not speed — nothing is being computed yet.</p>
+        </div>
+      </div>
+      <div class="card state-card">
+        <span class="dumi" data-state="thinking" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span>
+        <div class="state-card__meta">
+          <span class="state-card__name">Thinking</span>
+          <h3 style="margin:0">Searching the records</h3>
+          <p>Every orbit accelerates roughly fourfold and the core lights up.
+             Replaces the spinner entirely.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">In place</span>
+      <h2>Zug, doing its job</h2>
+      <p>The canton owns the page; Dumi is the help. Same split Alva uses, and
+         the one residents already read correctly.</p>
+    </div>
+    <div class="mock">
+      <div class="mock__bar">
+        <span class="mock__canton"><span class="mock__arms"></span> Kanton Zug</span>
+        <span class="mock__assistant">
+          <span class="dumi" data-state="idle" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span>
+          Dumi <em>Beta</em>
+        </span>
+      </div>
+      <div class="mock__body">
+        <div class="msg msg--user">
+          <div class="msg__text">I'm moving to Baar next month — what do I need to do?</div>
+        </div>
+        <div class="msg msg--bot">
+          <span class="dumi" data-state="idle" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span>
+          <div class="msg__text">
+            You have 14 days from moving in to register with the Einwohnerkontrolle
+            in Baar. Bring your ID or passport, your rental contract, and your
+            health-insurance certificate.<span class="msg__cite">1</span>
+          </div>
+        </div>
+        <div class="chips">
+          <span class="chip">What does registration cost?</span>
+          <span class="chip">Do I deregister in my old canton?</span>
+          <span class="chip">Show sources</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Palette</span>
+      <h2>Glacial, with one warm spark</h2>
+      <p>Swiss water and ice, not the pastel iridescence every AI assistant
+         reaches for. Stored as RGB triplets so any value takes an alpha.</p>
+    </div>
+    <div class="swatches">
+      <div class="swatch">
+        <div class="swatch__chip" style="background:#0B3B57"></div>
+        <div class="swatch__body">
+          <span class="swatch__role">Glacier — orb body</span>
+          <span class="swatch__hex">#0B3B57</span>
+          <span class="swatch__var">--dumi-deep</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__chip" style="background:#1E88A8"></div>
+        <div class="swatch__body">
+          <span class="swatch__role">Flow — primary light</span>
+          <span class="swatch__hex">#1E88A8</span>
+          <span class="swatch__var">--dumi-flow</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__chip" style="background:#6FD6D2"></div>
+        <div class="swatch__body">
+          <span class="swatch__role">Ice — fast highlight</span>
+          <span class="swatch__hex">#6FD6D2</span>
+          <span class="swatch__var">--dumi-ice</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__chip" style="background:#E8A33D"></div>
+        <div class="swatch__body">
+          <span class="swatch__role">Spark — canton slot</span>
+          <span class="swatch__hex">#E8A33D</span>
+          <span class="swatch__var">--dumi-accent</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Canton system</span>
+      <h2>One token per canton</h2>
+      <p>Everything else — geometry, tempo, palette, motion — is shared. A canton
+         folder overrides <code>--dumi-accent-rgb</code> and nothing else, so
+         Dumi stays recognisably one assistant across all 26.</p>
+    </div>
+    <div class="accents">
+      <div class="accent-card">
+        <span class="dumi" data-state="idle" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span>
+        <strong>Zug</strong>
+        <code>232 163 61</code>
+      </div>
+      <div class="accent-card">
+        <span class="dumi" data-state="idle" style="--dumi-accent-rgb:226 92 92" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span>
+        <strong>Basel-Stadt</strong>
+        <code>226 92 92</code>
+      </div>
+      <div class="accent-card">
+        <span class="dumi" data-state="idle" style="--dumi-accent-rgb:126 214 150" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span>
+        <strong>Bern</strong>
+        <code>126 214 150</code>
+      </div>
+      <div class="accent-card">
+        <span class="dumi" data-state="idle" style="--dumi-accent-rgb:196 154 232" aria-hidden="true"><span class="dumi__orb"><i class="dumi__blob dumi__blob--a"></i><i class="dumi__blob dumi__blob--b"></i><i class="dumi__blob dumi__blob--c"></i><i class="dumi__core"></i><i class="dumi__sheen"></i></span></span>
+        <strong>Genève</strong>
+        <code>196 154 232</code>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Shipped</span>
+      <h2>What's in the repo</h2>
+      <p>No build step, no dependencies — plain CSS custom properties, so this
+         drops into whatever framework the app lands on.</p>
+    </div>
+    <div class="files">
+<pre>shared/brand/
+├─ <b>dumi-tokens.css</b>   palette, type and motion tokens
+├─ <b>dumi-mark.css</b>     the mark, its states, lockups and launcher
+├─ <b>dumi-mark.svg</b>     standalone: favicon, OG image, print, email
+├─ <b>preview.html</b>      this page
+└─ <b>README.md</b>         usage and the canton override recipe</pre>
+    </div>
+  </section>
+
+  <footer>
+    Dumi identity, draft 01 · Archivo + Public Sans · Public Sans is drawn for
+    government digital services, which is the reason it's here.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var mark = document.getElementById('heroMark');
+  var buttons = document.querySelectorAll('.states button');
+  buttons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      buttons.forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+      btn.setAttribute('aria-pressed', 'true');
+      mark.dataset.state = btn.dataset.set;
+    });
+  });
+})();
+</script>
