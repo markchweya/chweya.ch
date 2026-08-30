@@ -75,6 +75,9 @@ dev = [
     "types-requests",
     "pip-audit>=2.7,<3",
     "respx>=0.22,<0.23",
+    # Generates the PDF fixtures in tests/fixtures. The application never
+    # produces PDFs; this is for building realistic test input.
+    "reportlab>=4.2,<5",
 ]
 
 [build-system]
