@@ -24,6 +24,7 @@ from app.db.models import (
     AuditAction,
     Chunk,
     ContentStatus,
+    ContradictionFinding,
     CrawlRun,
     Document,
     DocumentVersion,
@@ -33,6 +34,7 @@ from app.db.models import (
 from app.db.session import db_session
 from app.i18n import negotiate_language, t
 from app.observability import get_logger
+from app.review.resolution import ACTIONABLE_STATES
 from app.security.audit import record
 from app.security.auth import (
     CurrentUser,
@@ -271,6 +273,12 @@ def dashboard(
         "chunks_embedded": count(Chunk, Chunk.embedding.is_not(None)),
         "awaiting_review": count(
             DocumentVersion, DocumentVersion.status == ContentStatus.AWAITING_REVIEW.value
+        ),
+        "contradictions_open": count(
+            ContradictionFinding,
+            ContradictionFinding.state.in_(
+                [state.value for state in ACTIONABLE_STATES]
+            ),
         ),
         "approved": count(
             DocumentVersion, DocumentVersion.status == ContentStatus.APPROVED.value

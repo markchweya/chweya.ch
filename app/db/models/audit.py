@@ -85,6 +85,7 @@ class AuditAction(StrEnum):
 
     # Review
     CONTRADICTION_RESOLVED = "contradiction.resolved"
+    CONTRADICTION_DETECTION_RUN = "contradiction.detection_run"
     CONTENT_EXCLUDED = "content.excluded"
     CONTENT_RESTORED = "content.restored"
 

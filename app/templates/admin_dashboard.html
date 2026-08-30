@@ -26,6 +26,7 @@
       <div><dt>Passages embedded</dt><dd>{{ stats.chunks_embedded }} / {{ stats.chunks }}</dd></div>
       <div><dt>Approved versions</dt><dd>{{ stats.approved }}</dd></div>
       <div><dt>Awaiting review</dt><dd>{{ stats.awaiting_review }}</dd></div>
+      <div><dt>Open contradictions</dt><dd>{{ stats.contradictions_open }}</dd></div>
       <div><dt>Active users</dt><dd>{{ stats.users }}</dd></div>
     </dl>
   </section>
@@ -72,6 +73,9 @@
   {% endif %}
   {% if who.can(permission.MANAGE_DOCUMENTS) %}
     <p><a href="/admin/uploads">Upload and manage documents</a></p>
+  {% endif %}
+  {% if who.can(permission.RESOLVE_CONTRADICTIONS) %}
+    <p><a href="/admin/review">Review contradictions</a></p>
   {% endif %}
 </main>
 {% endblock %}

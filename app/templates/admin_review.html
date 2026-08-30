@@ -1,0 +1,105 @@
+{# The contradiction queue, most urgent first.
+
+   State is always a word. Priority is a number with a meaning documented in
+   docs/contradiction-review.md, not a traffic light. #}
+{% extends "base.html" %}
+{% block title %}Review · Dumi{% endblock %}
+{% block body %}
+<header class="bar">
+  <span class="dumi-lockup">
+    {% include "_mark.html" %} Dumi
+    <span class="dumi-lockup__tag">{{ t('admin.title') }}</span>
+  </span>
+  <a href="/admin">{{ t('admin.title') }}</a>
+</header>
+
+<main id="main" class="admin">
+  <h1>Contradiction review</h1>
+
+  {% if message %}
+    <p class="auth__error" role="status">{{ message }}</p>
+  {% endif %}
+
+  <p>
+    The detector notices two passages about apparently the same subject
+    stating different fees, deadlines, contacts or opening hours. It never
+    decides which is right; that is what this queue is for. "Not a
+    contradiction" is a legitimate and common answer.
+  </p>
+
+  <dl class="stats">
+    <div><dt>Open</dt><dd>{{ counts.get('open', 0) }}</dd></div>
+    <div><dt>In review</dt><dd>{{ counts.get('in_review', 0) }}</dd></div>
+    <div><dt>Unresolved</dt><dd>{{ counts.get('unresolved', 0) }}</dd></div>
+    <div><dt>Decided</dt>
+      <dd>{{ (counts.get('not_a_contradiction', 0)
+             + counts.get('resolved_first_current', 0)
+             + counts.get('resolved_second_current', 0)
+             + counts.get('resolved_both_excluded', 0)) }}</dd></div>
+  </dl>
+
+  <form method="post" action="/admin/review/detect">
+    <button type="submit" class="send">Run detection now</button>
+  </form>
+
+  <section aria-labelledby="queue-heading">
+    <h2 id="queue-heading">Awaiting a decision</h2>
+    {% if queue %}
+      <table class="grid">
+        <caption class="visually-hidden">Contradiction findings awaiting review</caption>
+        <thead>
+          <tr>
+            <th scope="col">Priority</th>
+            <th scope="col">Kind</th>
+            <th scope="col">Values</th>
+            <th scope="col">State</th>
+            <th scope="col">Filed</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in queue %}
+            <tr>
+              <td>{{ finding.priority }}</td>
+              <th scope="row">
+                <a href="/admin/review/{{ finding.id }}">{{ finding.kind | replace('_', ' ') }}</a>
+              </th>
+              <td>{{ finding.first_value }} · {{ finding.second_value }}</td>
+              <td>{{ finding.state | replace('_', ' ') }}</td>
+              <td>{{ finding.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>Nothing is waiting. Run detection after new content is approved.</p>
+    {% endif %}
+  </section>
+
+  {% if decided %}
+    <section aria-labelledby="decided-heading">
+      <h2 id="decided-heading">Recent decisions</h2>
+      <table class="grid">
+        <caption class="visually-hidden">Recently decided findings</caption>
+        <thead>
+          <tr>
+            <th scope="col">Kind</th>
+            <th scope="col">Decision</th>
+            <th scope="col">Decided</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in decided %}
+            <tr>
+              <th scope="row">
+                <a href="/admin/review/{{ finding.id }}">{{ finding.kind | replace('_', ' ') }}</a>
+              </th>
+              <td>{{ finding.state | replace('_', ' ') }}</td>
+              <td>{{ finding.resolved_at.strftime('%d.%m.%Y %H:%M') if finding.resolved_at else '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% endif %}
+</main>
+{% endblock %}

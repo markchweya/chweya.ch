@@ -1,0 +1,124 @@
+{# One finding: both passages in full, then the decision.
+
+   The passages are shown complete, not excerpted. The reviewer is deciding
+   which official statement is current, and a decision made from a truncated
+   excerpt is a guess. #}
+{% extends "base.html" %}
+{% block title %}{{ finding.kind | replace('_', ' ') }} · Review · Dumi{% endblock %}
+{% block body %}
+<header class="bar">
+  <span class="dumi-lockup">
+    {% include "_mark.html" %} Dumi
+    <span class="dumi-lockup__tag">{{ t('admin.title') }}</span>
+  </span>
+  <a href="/admin/review">Review</a>
+</header>
+
+<main id="main" class="admin">
+  <h1>{{ finding.kind | replace('_', ' ') | capitalize }}</h1>
+
+  {% if problems %}
+    <div role="alert">
+      {% for problem in problems %}
+        <p class="auth__error">{{ problem }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <dl class="stats">
+    <div><dt>State</dt><dd>{{ finding.state | replace('_', ' ') }}</dd></div>
+    <div><dt>Priority</dt><dd>{{ finding.priority }}</dd></div>
+    <div><dt>Filed</dt><dd>{{ finding.created_at.strftime('%d.%m.%Y %H:%M') }}</dd></div>
+  </dl>
+
+  <p>{{ finding.explanation }}</p>
+  {% if finding.shared_context %}
+    <p>Compared because both passages mention:
+      {% for term in finding.shared_context %}{{ term }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+  {% endif %}
+
+  {% for side, chunk, document, version, value in [
+       ('First passage', ctx.first_chunk, ctx.first_document, ctx.first_version, finding.first_value),
+       ('Second passage', ctx.second_chunk, ctx.second_document, ctx.second_version, finding.second_value)] %}
+    <section aria-label="{{ side }}">
+      <h2>{{ side }}</h2>
+      {% if chunk %}
+        <dl class="stats">
+          <div><dt>Document</dt>
+            <dd>
+              {% if document and document.url %}
+                <a href="{{ document.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ document.title or 'Untitled' }}</a>
+              {% else %}
+                {{ document.title if document else '—' }}
+              {% endif %}
+            </dd></div>
+          <div><dt>Extracted value</dt><dd>{{ value }}</dd></div>
+          <div><dt>Version</dt>
+            <dd>{{ version.version_number if version else '—' }}
+                ({{ version.status | replace('_', ' ') if version else 'missing' }})</dd></div>
+          <div><dt>Retrieved</dt>
+            <dd>{{ version.retrieved_at.strftime('%d.%m.%Y') if version and version.retrieved_at else '—' }}</dd></div>
+          {% if chunk.section_path %}
+            <div><dt>Section</dt>
+              <dd>{% for part in chunk.section_path %}{{ part }}{% if not loop.last %} › {% endif %}{% endfor %}</dd></div>
+          {% endif %}
+        </dl>
+        <pre class="preview">{{ chunk.text }}</pre>
+      {% else %}
+        <p>This passage no longer exists. Its document was likely deleted.</p>
+      {% endif %}
+    </section>
+  {% endfor %}
+
+  {% if actionable %}
+    <section aria-labelledby="decide-heading">
+      <h2 id="decide-heading">Decision</h2>
+      {% if finding.state == review_states.OPEN.value %}
+        <form method="post" action="/admin/review/{{ finding.id }}/claim">
+          <button type="submit" class="send">Start review</button>
+        </form>
+      {% endif %}
+
+      <form class="auth__form" method="post" action="/admin/review/{{ finding.id }}/resolve">
+        <fieldset>
+          <legend>What is true here?</legend>
+          {# Radio labels state consequences plainly. A reviewer must know
+             that a resolution can take a page out of the index before
+             choosing it, not discover it afterwards. #}
+          <label><input type="radio" name="outcome" value="not_a_contradiction" required>
+            Not a contradiction. Both statements stand; nothing changes.</label>
+          <label><input type="radio" name="outcome" value="resolved_first_current">
+            The first passage is current. The version carrying the second
+            leaves the index until it is re-crawled.</label>
+          <label><input type="radio" name="outcome" value="resolved_second_current">
+            The second passage is current. The version carrying the first
+            leaves the index until it is re-crawled.</label>
+          <label><input type="radio" name="outcome" value="resolved_both_excluded">
+            Neither should be used. Both versions leave the index until the
+            canton clarifies.</label>
+          <label><input type="radio" name="outcome" value="unresolved">
+            Cannot tell. The finding stays open, and answers touching these
+            passages keep saying the sources appear inconsistent.</label>
+        </fieldset>
+
+        <label for="note">Reason</label>
+        <input type="text" id="note" name="note" maxlength="500"
+               placeholder="Required when content leaves the index">
+
+        <button type="submit" class="send">Record decision</button>
+      </form>
+    </section>
+  {% else %}
+    <section aria-labelledby="decision-heading">
+      <h2 id="decision-heading">Decision</h2>
+      <p>
+        Decided as <strong>{{ finding.state | replace('_', ' ') }}</strong>
+        {% if finding.resolved_at %} on {{ finding.resolved_at.strftime('%d.%m.%Y %H:%M') }}{% endif %}.
+        {% if finding.reviewer_note %} Reason: {{ finding.reviewer_note }}{% endif %}
+      </p>
+      <p>A decided finding stays decided. If the situation changes, run
+         detection again and a new finding will be filed.</p>
+    </section>
+  {% endif %}
+</main>
+{% endblock %}
