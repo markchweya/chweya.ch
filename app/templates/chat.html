@@ -56,7 +56,12 @@
     {% endfor %}
   </div>
 
-  <form id="ask" class="ask" method="post" action="/ask">
+  {# The two fixed strings the script needs in the user's language: the
+     waiting sentence shown beside the mark and announced by the status
+     region, and the message that replaces a failed stream. #}
+  <form id="ask" class="ask" method="post" action="/ask"
+        data-thinking="{{ t('chat.thinking') }}"
+        data-unavailable="{{ t('answer.unavailable') }}">
     <input type="hidden" name="lang" value="{{ language }}">
     {# A real label, visually hidden rather than absent. A placeholder is not
        a label: it disappears on focus and many screen readers skip it. #}

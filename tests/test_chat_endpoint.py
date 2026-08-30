@@ -253,6 +253,14 @@ class TestChatPage:
         assert 'id="hero"' not in html
         assert 'class="suggestion"' not in html
 
+    def test_the_form_carries_the_localized_script_strings(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The script shows the waiting sentence and the failed-stream
+        message from data attributes. Without them the status region was
+        silently empty, which is an accessibility failure."""
+        html = client.get("/").text
+        assert 'data-thinking="Dumi sucht in den offiziellen Seiten"' in html
+        assert "data-unavailable=" in html
+
     def test_the_mistakes_disclaimer_sits_under_the_composer(self, client) -> None:  # type: ignore[no-untyped-def]
         """Dumi is a model and models make mistakes. The page says so, in
         the user's language, with the canton portal to verify against."""

@@ -204,6 +204,15 @@ body {
 
 .msg__text { white-space: pre-wrap; }
 
+/* The waiting sentence beside the thinking mark. Static text with no
+ * animation of its own: the mark's motion carries the state, this says it
+ * in words. */
+.msg__thinking {
+  padding-top: 0.3rem;
+  color: var(--dumi-ink-soft);
+  font-size: 0.9375rem;
+}
+
 /* Confidence is carried by a left border style, and by the caution text
  * itself. Never by colour alone. */
 .msg--bot[data-confidence="low"] .msg__body,

@@ -93,15 +93,38 @@
     var article = document.createElement("article");
     article.className = "msg msg--bot";
     article.innerHTML = markup("thinking");
+
+    // The waiting sentence, in the user's language, beside the mark. Static
+    // text: the mark's own motion is the status indicator, this only says
+    // in words what the motion means. aria-hidden because the same sentence
+    // is announced through the status region; the transcript is a live
+    // region and would otherwise announce it twice.
+    var thinking = null;
+    if (form.dataset.thinking) {
+      thinking = document.createElement("span");
+      thinking.className = "msg__thinking";
+      thinking.setAttribute("aria-hidden", "true");
+      thinking.textContent = form.dataset.thinking;
+      article.appendChild(thinking);
+    }
+
     transcript.appendChild(article);
     var shell = {
       article: article,
       body: null,
       text: null,
-      // The card is created only when there is something to put in it. Until
-      // then the mark alone carries the waiting state; it is the product's
-      // one status indicator.
+      // The waiting sentence leaves the moment anything real happens: the
+      // first words, the final answer, an error, or a stop.
+      settle: function () {
+        if (thinking) {
+          thinking.remove();
+          thinking = null;
+        }
+      },
+      // The body is created only when there is something to put in it. An
+      // empty bubble reads as a broken message.
       ensureBody: function () {
+        shell.settle();
         if (!shell.body) {
           shell.body = document.createElement("div");
           shell.body.className = "msg__body";
@@ -299,6 +322,7 @@
       })
       .catch(function (error) {
         setState(shell.article, "idle");
+        shell.settle();
         if (error && error.name === "AbortError") {
           // The person stopped the answer. What has been shown stays; the
           // buffer is flushed so the last words are not lost mid-sentence.
