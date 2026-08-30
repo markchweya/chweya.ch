@@ -104,7 +104,11 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Tests legitimately use assert, and hardcode known-bad credentials in order
 # to prove the startup checks reject them.
-"tests/**" = ["S101", "S105", "S106"]
+# Tests use assert, and hardcode known-bad credentials and non-routable
+# addresses in order to prove those are rejected. S104 flags "0.0.0.0" as a
+# bind-to-all-interfaces string; here it is test data for an address the
+# crawler must refuse.
+"tests/**" = ["S101", "S104", "S105", "S106"]
 "migrations/**" = ["E402"]
 # AuditAction members such as PASSWORD_CHANGED are action identifiers, not
 # credentials. The rule matches on the constant name, so it cannot tell the
