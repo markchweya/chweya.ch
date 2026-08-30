@@ -74,6 +74,12 @@ class RiskTopic(StrEnum):
 # Matched against the question in all four languages. Deliberately broad: a
 # false positive adds a caution notice, a false negative removes one from a
 # question that needed it.
+#
+# German compounds put the noun last, so a leading word boundary defeats the
+# match: \bbewilligung\b cannot see Baubewilligung, and \bsteuer\b cannot see
+# Quellensteuer. Terms that commonly form the tail of a compound are therefore
+# written without a leading boundary. This widens the match, which is the right
+# direction to be wrong in here.
 RISK_PATTERNS: dict[RiskTopic, tuple[str, ...]] = {
     RiskTopic.EMERGENCY: (
         r"\bnotfall\b", r"\bnotruf\b", r"\bemergency\b", r"\burgence\b", r"\bemergenza\b",
@@ -97,7 +103,7 @@ RISK_PATTERNS: dict[RiskTopic, tuple[str, ...]] = {
         r"\bmigration", r"\bauslaender",
     ),
     RiskTopic.TAX: (
-        r"\bsteuer", r"\btax\b", r"\btaxes\b", r"\bimpot", r"\bimposta",
+        r"steuer", r"\btax\b", r"\btaxes\b", r"\bimpot", r"\bimposta",
         r"\bveranlagung\b", r"\bsteuererklaerung\b", r"\btax return\b",
         r"\bmehrwertsteuer\b", r"\bquellensteuer\b",
     ),
@@ -109,20 +115,20 @@ RISK_PATTERNS: dict[RiskTopic, tuple[str, ...]] = {
     ),
     RiskTopic.LEGAL: (
         r"\brecht\b", r"\bgesetz\b", r"\bklage\b", r"\bgericht\b", r"\banwalt\b",
-        r"\bstrafe\b", r"\bbusse\b", r"\blegal\b", r"\blawyer\b", r"\bcourt\b",
+        r"\bstrafe\b", r"busse\b", r"\blegal\b", r"\blawyer\b", r"\bcourt\b",
         r"\bavocat\b", r"\btribunal\b", r"\bavvocato\b", r"\beinsprache\b",
         r"\brekurs\b", r"\bbeschwerde\b",
     ),
     RiskTopic.DEADLINE: (
-        r"\bfrist\b", r"\btermin\b", r"\bdeadline\b", r"\bdelai\b", r"\bscadenza\b",
+        r"frist\b", r"\btermin\b", r"\bdeadline\b", r"\bdelai\b", r"\bscadenza\b",
         r"\bverjaehrung\b", r"\binnert\b", r"\bbis wann\b", r"\bby when\b",
     ),
     RiskTopic.PERMIT: (
-        r"\bbewilligung\b", r"\bgenehmigung\b", r"\bpermit\b", r"\bautorisation\b",
-        r"\bautorizzazione\b", r"\bbaugesuch\b", r"\bkonzession\b", r"\blizenz\b",
+        r"bewilligung", r"genehmigung", r"\bpermit\b", r"\bautorisation\b",
+        r"\bautorizzazione\b", r"\bbaugesuch\b", r"konzession", r"\blizenz\b",
     ),
     RiskTopic.FINANCIAL_OBLIGATION: (
-        r"\bgebuehr", r"\bkosten\b", r"\brechnung\b", r"\bzahlung\b", r"\bbusse\b",
+        r"gebuehr", r"kosten\b", r"\brechnung\b", r"\bzahlung\b", r"busse\b",
         r"\bfee\b", r"\bcharge\b", r"\bpayment\b", r"\btarif\b", r"\bcosto\b",
     ),
 }
