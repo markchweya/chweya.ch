@@ -192,40 +192,62 @@ body {
 .sources__lang::before { content: "· "; }
 .sources__date::before { content: "· "; }
 
-/* --- composer ------------------------------------------------------------ */
+/* --- composer ------------------------------------------------------------
+   The field and its send button share one rounded container, the way a
+   terminal prompt is one line. Two bordered pills sitting side by side read
+   as two controls; this reads as one place to type, which is what it is. */
 .ask {
   position: sticky;
   bottom: 0;
-  display: flex;
-  gap: 0.5rem;
   margin-top: 1.5rem;
   padding: 0.75rem 0;
   background: var(--dumi-ground);
 }
+.ask__box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.25rem 0.25rem 0.9rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: 999px;
+  background: var(--dumi-surface);
+}
+
+/* The focus ring goes on the container rather than the input, so the whole
+   control shows focus. On the input alone it would sit inside the border. */
+.ask__box:focus-within {
+  border-color: var(--dumi-flow);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dumi-flow) 30%, transparent);
+}
+
 .ask input[type="text"] {
   flex: 1;
   min-width: 0;
   min-height: 2.75rem;
-  padding: 0.6rem 0.9rem;
-  border: 1px solid var(--dumi-line);
-  border-radius: 999px;
-  background: var(--dumi-surface);
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--dumi-ink);
   font: inherit;
 }
+.ask input[type="text"]:focus { outline: none; }
+
+/* Still 2.75rem (44px), the minimum target size. The border is dropped
+   because the box around them carries one, and the ground fills the shape so
+   the button still reads as a button inside the field. */
 .send, .stop {
   min-height: 2.75rem;
   min-width: 2.75rem;
   padding: 0 1.1rem;
-  border: 1px solid var(--dumi-line);
+  border: 0;
   border-radius: 999px;
-  background: var(--dumi-surface);
+  background: var(--dumi-ground);
   color: var(--dumi-ink);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
-.send:hover, .stop:hover { background: var(--dumi-ground); }
+.send:hover, .stop:hover { background: var(--dumi-line); }
 .status { min-height: 1.25rem; margin: 0.5rem 0 0; font-size: 0.875rem; color: var(--dumi-ink-soft); }
 
 /* --- small screens ------------------------------------------------------- */

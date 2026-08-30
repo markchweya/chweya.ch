@@ -53,18 +53,23 @@
     {# A real label, visually hidden rather than absent. A placeholder is not
        a label: it disappears on focus and many screen readers skip it. #}
     <label for="question" class="visually-hidden">{{ t('chat.placeholder') }}</label>
-    <input id="question"
-           name="question"
-           type="text"
-           autocomplete="off"
-           maxlength="1000"
-           required
-           placeholder="{{ t('chat.placeholder') }}"
-           aria-describedby="notice-title">
-    <button type="submit" class="send">{{ t('chat.send') }}</button>
-    {# Hidden until a request is in flight. Section 15 requires a way to stop
-       generated output. #}
-    <button type="button" id="stop" class="stop" hidden>{{ t('chat.stop') }}</button>
+    {# The field and its buttons share one border, the way a terminal prompt is
+       one line. The border sits on this box rather than the input, so the
+       whole control shows focus. #}
+    <div class="ask__box">
+      <input id="question"
+             name="question"
+             type="text"
+             autocomplete="off"
+             maxlength="1000"
+             required
+             placeholder="{{ t('chat.placeholder') }}"
+             aria-describedby="notice-title">
+      <button type="submit" class="send">{{ t('chat.send') }}</button>
+      {# Hidden until a request is in flight. Section 15 requires a way to stop
+         generated output. #}
+      <button type="button" id="stop" class="stop" hidden>{{ t('chat.stop') }}</button>
+    </div>
   </form>
 
   {# Status for assistive technology. The Dumi mark carries the same state
