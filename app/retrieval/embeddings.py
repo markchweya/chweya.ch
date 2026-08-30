@@ -209,6 +209,46 @@ class SentenceTransformerProvider:
         return list(map(float, vector))
 
 
+class UnavailableEmbeddings:
+    """Stands in when the configured embedding model could not be loaded.
+
+    Loading a sentence-transformers model can mean downloading it, and a host
+    with a cold cache behind a restricted network cannot. That is a normal
+    condition for the kind of deployment this system is written for, so it
+    must cost the semantic arm of retrieval, never the whole request.
+
+    Both embed methods raise. Retrieval already treats a provider that fails
+    at query time as a degraded search and continues with the keyword arm, so
+    a model that failed to load takes exactly the same path as a model that
+    failed to answer.
+    """
+
+    def __init__(self, reason: str, dimensions: int) -> None:
+        self._reason = reason
+        self._dimensions = dimensions
+
+    @property
+    def dimensions(self) -> int:
+        return self._dimensions
+
+    @property
+    def model_name(self) -> str:
+        return "unavailable"
+
+    @property
+    def is_semantic(self) -> bool:
+        return False
+
+    def _refuse(self) -> RuntimeError:
+        return RuntimeError(f"embedding model unavailable: {self._reason}")
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        raise self._refuse()
+
+    def embed_query(self, text: str) -> list[float]:
+        raise self._refuse()
+
+
 def build_embedding_provider(settings: Settings | None = None) -> EmbeddingProvider:
     """Return the configured provider.
 

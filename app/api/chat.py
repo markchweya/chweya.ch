@@ -14,6 +14,7 @@ one surface can answer something the other cannot.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -30,7 +31,11 @@ from app.llm.apertus import ApertusProvider
 from app.llm.base import LLMProvider
 from app.observability import get_logger
 from app.retrieval.answer import Answer, answer_question
-from app.retrieval.embeddings import EmbeddingProvider, build_embedding_provider
+from app.retrieval.embeddings import (
+    EmbeddingProvider,
+    UnavailableEmbeddings,
+    build_embedding_provider,
+)
 
 logger = get_logger(__name__)
 router = APIRouter(tags=["chat"])
@@ -132,9 +137,54 @@ def get_llm_provider() -> LLMProvider:
     return ApertusProvider(get_settings())
 
 
+# The provider is cached per configuration for the life of the process. A
+# sentence-transformers model is hundreds of megabytes; constructing it per
+# request would load it per request. A construction failure is also cached,
+# briefly: loading can mean downloading, a host with a cold cache behind a
+# restricted network cannot, and paying the download timeout on every single
+# question would turn one unavailable model into a slow site.
+_provider_cache: dict[str, EmbeddingProvider] = {}
+_provider_failures: dict[str, float] = {}
+PROVIDER_RETRY_SECONDS = 300.0
+
+
 def get_embedding_provider() -> EmbeddingProvider:
-    """Return the embedding provider for one request."""
-    return build_embedding_provider(get_settings())
+    """Return the embedding provider for one request.
+
+    A provider that cannot be constructed becomes :class:`UnavailableEmbeddings`
+    rather than an exception. Retrieval treats its failing embed methods as a
+    degraded search and answers from the keyword arm, which is the honest
+    behaviour: the site stays up, and the answer says less rather than nothing.
+    """
+    settings = get_settings()
+    key = f"{settings.embedding_model}:{settings.embedding_dimensions}"
+
+    cached = _provider_cache.get(key)
+    if cached is not None:
+        if not isinstance(cached, UnavailableEmbeddings):
+            return cached
+        # A cached failure is retried once its hold expires, so a transient
+        # network problem does not disable semantic search until a restart.
+        if time.monotonic() - _provider_failures.get(key, 0.0) < PROVIDER_RETRY_SECONDS:
+            return cached
+        del _provider_cache[key]
+
+    try:
+        provider: EmbeddingProvider = build_embedding_provider(settings)
+    except Exception as exc:  # noqa: BLE001 - any load failure degrades, none aborts
+        logger.warning(
+            "embeddings.load_failed",
+            model=settings.embedding_model,
+            error=type(exc).__name__,
+            retry_in_seconds=int(PROVIDER_RETRY_SECONDS),
+        )
+        provider = UnavailableEmbeddings(
+            reason=type(exc).__name__, dimensions=settings.embedding_dimensions
+        )
+        _provider_failures[key] = time.monotonic()
+
+    _provider_cache[key] = provider
+    return provider
 
 
 async def _produce_answer(

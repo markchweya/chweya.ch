@@ -356,3 +356,133 @@ class TestValidation:
                 break
         assert last is not None and last.status_code == 429
         assert last.headers.get("Retry-After")
+
+
+class TestFailureHandling:
+    """What a resident sees when something inside the system breaks."""
+
+    @pytest.fixture(autouse=True)
+    def _fresh_rate_limit(self):  # type: ignore[no-untyped-def]
+        """The limiter is process-wide, and the rate-limit test above spends
+        the whole budget. These tests assert on failure handling, not on
+        throttling, so they start with a clean window."""
+        from app.api import chat
+
+        chat._LIMITERS.clear()
+        yield
+        chat._LIMITERS.clear()
+
+    def test_a_crash_returns_the_request_id_it_tells_you_to_quote(self, seeded, db) -> None:  # type: ignore[no-untyped-def]
+        """The 500 body asks the user to quote the request id, so it must
+        actually contain one. It used to contain an empty string, because the
+        handler read a contextvar that the request middleware had already
+        reset by the time the outermost error middleware ran."""
+        app = create_app()
+
+        def broken_session():
+            raise RuntimeError("wired to fail for this test")
+
+        app.dependency_overrides[db_session] = broken_session
+
+        with TestClient(app, raise_server_exceptions=False) as test_client:
+            response = test_client.post("/ask", data={"question": "Wie melde ich mich an?"})
+
+        assert response.status_code == 500
+        payload = response.json()
+        assert payload["request_id"], "the body promises a request id and must carry one"
+        assert payload["request_id"] == response.headers["X-Request-ID"]
+        # And nothing internal leaks alongside it.
+        assert "wired to fail" not in response.text
+
+    def test_an_unavailable_embedding_model_degrades_to_keyword_search(self, seeded, db) -> None:  # type: ignore[no-untyped-def]
+        """A model that cannot be loaded costs the semantic arm, never the
+        request. The keyword arm still finds the page and the answer arrives,
+        which is the difference between a quieter answer and a 500."""
+        from app.retrieval.embeddings import UnavailableEmbeddings
+
+        app = create_app()
+        stub = StubLLM()
+        app.dependency_overrides[get_llm_provider] = lambda: stub
+        app.dependency_overrides[get_embedding_provider] = lambda: UnavailableEmbeddings(
+            reason="ProxyError", dimensions=768
+        )
+        app.dependency_overrides[db_session] = lambda: db
+
+        with TestClient(app) as test_client:
+            response = test_client.post(
+                "/ask",
+                json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+                headers={"Accept": "application/json"},
+            )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert not payload["is_refusal"]
+        assert "CHF 20.--" in payload["text"]
+
+
+class TestProviderCache:
+    """The embedding provider is built once per process, not once per request."""
+
+    @pytest.fixture(autouse=True)
+    def _clean_cache(self):  # type: ignore[no-untyped-def]
+        from app.api import chat
+
+        chat._provider_cache.clear()
+        chat._provider_failures.clear()
+        yield
+        chat._provider_cache.clear()
+        chat._provider_failures.clear()
+
+    def test_a_working_provider_is_constructed_once(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        from app.api import chat
+
+        calls = {"n": 0}
+
+        def build(settings):  # type: ignore[no-untyped-def]
+            calls["n"] += 1
+            return HashingProvider(768)
+
+        monkeypatch.setattr(chat, "build_embedding_provider", build)
+        first = chat.get_embedding_provider()
+        second = chat.get_embedding_provider()
+        assert first is second
+        assert calls["n"] == 1
+
+    def test_a_load_failure_is_held_rather_than_retried_every_request(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """A blocked model download must not be paid for on every question.
+        The failure is cached with a retry hold, so one slow timeout does not
+        become a site-wide per-request latency."""
+        from app.api import chat
+        from app.retrieval.embeddings import UnavailableEmbeddings
+
+        calls = {"n": 0}
+
+        def build(settings):  # type: ignore[no-untyped-def]
+            calls["n"] += 1
+            raise OSError("proxy refused the download")
+
+        monkeypatch.setattr(chat, "build_embedding_provider", build)
+        first = chat.get_embedding_provider()
+        second = chat.get_embedding_provider()
+        assert isinstance(first, UnavailableEmbeddings)
+        assert second is first
+        assert calls["n"] == 1
+
+    def test_a_held_failure_is_retried_after_the_hold_expires(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """Cached failure must not mean disabled until restart."""
+        from app.api import chat
+
+        def build(settings):  # type: ignore[no-untyped-def]
+            raise OSError("proxy refused the download")
+
+        monkeypatch.setattr(chat, "build_embedding_provider", build)
+        chat.get_embedding_provider()
+
+        # Age the recorded failure past the hold, then make loading work.
+        key = next(iter(chat._provider_failures))
+        chat._provider_failures[key] -= chat.PROVIDER_RETRY_SECONDS + 1
+        monkeypatch.setattr(chat, "build_embedding_provider", lambda s: HashingProvider(768))
+
+        recovered = chat.get_embedding_provider()
+        assert isinstance(recovered, HashingProvider)
