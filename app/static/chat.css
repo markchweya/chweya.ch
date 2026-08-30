@@ -193,20 +193,13 @@ body {
 
 .msg--bot .dumi { --dumi-size: 1.75rem; flex: none; margin-top: 0.3rem; }
 
-/* The answer card sits on the surface with a faint wash of the orb's pale
- * aqua across its top edge, the counterpart of the sheen on the mark
- * beside it. Faint on purpose: the text is the content, the tint is only
- * what keeps the card and the mark reading as one voice. */
+/* The answer is plain text beside the mark. No bubble: the person asked a
+ * question and the page answers in its own voice, the way a document does.
+ * The mark alone says who is speaking. */
 .msg--bot .msg__body {
   flex: 1;
   min-width: 0;
-  padding: 0.85rem 1.05rem;
-  border: 1px solid var(--dumi-line);
-  border-radius: 6px 18px 18px 18px;
-  background:
-    linear-gradient(rgb(var(--dumi-ice-rgb) / 0.08), transparent 3.5rem)
-    var(--dumi-surface);
-  box-shadow: 0 1px 4px rgb(var(--dumi-deep-rgb) / 0.06);
+  padding-top: 0.3rem;
 }
 
 .msg__text { white-space: pre-wrap; }
@@ -216,7 +209,15 @@ body {
 .msg--bot[data-confidence="low"] .msg__body,
 .msg--bot[data-confidence="insufficient"] .msg__body {
   border-left: 3px solid var(--dumi-line);
+  padding-left: 0.85rem;
 }
+
+/* The page scrolls without showing a scrollbar. Scrolling itself still
+ * works by wheel, touch and keyboard; only the bar is hidden, and only on
+ * the chat page. The administration keeps its scrollbars: tables need
+ * them. */
+html:has(#transcript) { scrollbar-width: none; }
+html:has(#transcript)::-webkit-scrollbar { display: none; }
 
 .callout {
   margin: 0 0 0.75rem;
