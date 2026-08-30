@@ -127,6 +127,9 @@ ignore = [
 # Swiss number formatting uses both the straight and the typographic
 # apostrophe as a thousands separator, so the money pattern has to match both.
 "app/ingest/contradictions.py" = ["RUF001"]
+# The contradiction test asserts both apostrophe forms parse identically, so
+# it necessarily contains the typographic one.
+"tests/test_contradictions.py" = ["RUF001"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

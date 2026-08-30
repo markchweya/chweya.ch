@@ -6,14 +6,12 @@ that the bootstrap password must be changed. These tests are that claim.
 
 from __future__ import annotations
 
-import datetime as dt
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text as sql
 
 from app.cli.bootstrap_admin import bootstrap_admin
-from app.db.models import Role, RoleName, User, UserRole
+from app.db.models import User, UserRole
 from app.db.session import db_session
 from app.main import create_app
 from app.security.auth import Permission, permissions_for

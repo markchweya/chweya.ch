@@ -11,6 +11,8 @@ once, by reading a PostgresDsn attribute that does not exist.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from pydantic import ValidationError
 
@@ -21,11 +23,25 @@ from app.config import (
     is_known_unsafe_credential,
 )
 
-# The development bootstrap values from the brief. Written here, in the test
-# suite, rather than in application source, which is where the brief forbids
-# them. Their digests are what the application carries.
-DEV_DB_PASSWORD = "ZugDBTest123"
-DEV_ADMIN_PASSWORD = "ZugAdminTest123"
+# The development bootstrap values are read from the environment, never
+# written here. The brief says not to commit them to Git, without carving out
+# an exception for tests, and a credential in a test file is still a
+# credential in the repository.
+#
+# They live in the git-ignored .env, so these tests skip when it is absent,
+# for example in a clean CI checkout. The digest mechanism itself is still
+# exercised on every run by the weak-value tests below, which use values that
+# are not secrets.
+DEV_DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "")
+DEV_ADMIN_PASSWORD = os.environ.get("BOOTSTRAP_ADMIN_PASSWORD", "")
+
+needs_dev_credentials = pytest.mark.skipif(
+    not (DEV_DB_PASSWORD and DEV_ADMIN_PASSWORD),
+    reason=(
+        "POSTGRES_PASSWORD and BOOTSTRAP_ADMIN_PASSWORD are not set. "
+        "Source the local .env to run the bootstrap-value checks."
+    ),
+)
 
 SAFE_SECRET = "an-adequately-long-random-secret-key-for-tests-000"
 
@@ -52,6 +68,7 @@ def production_settings(**overrides: object) -> Settings:
 
 
 class TestKnownUnsafeCredentials:
+    @needs_dev_credentials
     def test_both_development_passwords_are_recognised(self) -> None:
         assert is_known_unsafe_credential(DEV_DB_PASSWORD)
         assert is_known_unsafe_credential(DEV_ADMIN_PASSWORD)
@@ -69,6 +86,7 @@ class TestProductionRefusals:
         settings = production_settings()
         assert settings.environment is Environment.PRODUCTION
 
+    @needs_dev_credentials
     def test_refuses_the_development_database_password(self) -> None:
         with pytest.raises(UnsafeConfiguration) as caught:
             production_settings(
@@ -76,6 +94,7 @@ class TestProductionRefusals:
             )
         assert "DATABASE_URL contains a known development or weak password" in str(caught.value)
 
+    @needs_dev_credentials
     def test_refuses_the_development_admin_password(self) -> None:
         with pytest.raises(UnsafeConfiguration) as caught:
             production_settings(bootstrap_admin_password=DEV_ADMIN_PASSWORD)
@@ -132,6 +151,7 @@ class TestProductionRefusals:
         assert "PUBLIC_BASE_URL" in message
         assert "CRAWLER_CONTACT" in message
 
+    @needs_dev_credentials
     def test_failure_messages_never_contain_the_credential(self) -> None:
         """A startup failure must not leak a password into logs or container status."""
         with pytest.raises(UnsafeConfiguration) as caught:
@@ -149,6 +169,7 @@ class TestProductionRefusals:
 class TestDevelopmentIsPermissive:
     """Development must stay usable, or the checks get disabled instead of fixed."""
 
+    @needs_dev_credentials
     def test_development_accepts_the_supplied_bootstrap_values(self) -> None:
         settings = Settings(  # type: ignore[call-arg]
             _env_file=None,

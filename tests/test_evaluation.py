@@ -10,8 +10,6 @@ from __future__ import annotations
 import json
 import pathlib
 
-import pytest
-
 from app.evaluation.dataset import (
     ADVERSARIAL_CASES,
     EvalCase,
