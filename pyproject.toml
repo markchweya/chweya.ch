@@ -117,6 +117,13 @@ ignore = [
 # credentials. The rule matches on the constant name, so it cannot tell the
 # difference. Scoped to this one file so a real secret elsewhere still fails.
 "app/db/models/audit.py" = ["S105"]
+# The injection tests deliberately contain fullwidth and zero-width lookalike
+# characters, because proving they are normalised before matching is the test.
+# RUF001-003 flag exactly those characters, so the rules cannot apply here.
+"tests/test_injection.py" = ["RUF001", "RUF002", "RUF003"]
+# The injection patterns themselves match on lookalike and invisible
+# characters, so the same applies to the module under test.
+"app/ingest/injection.py" = ["RUF001", "RUF002", "RUF003"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
