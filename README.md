@@ -1,46 +1,117 @@
 # chweya.ch — Dumi
 
-**Dumi** is a website chatbot for Swiss cantonal administrations. It answers
-residents' questions about canton services, such as registering an address,
-disposing of bulky waste, renewing an ID or filing a tax return, and it cites
-the official page each answer came from.
+**Dumi** is an unofficial AI assistant for public Canton of Zug information. It
+answers questions about canton services in German, English, French and Italian,
+grounded in retrieved official content, and cites the page each answer came
+from.
 
-One assistant, one shell, one brand. A canton supplies only what is genuinely
-its own.
+**It is not operated or endorsed by the Canton of Zug.** It has never been
+deployed. See [known limitations](docs/known-limitations.md), which is the
+first document to read.
 
-**Zug is first.**
+## What it does
 
-Working rules for the project are in [CLAUDE.md](CLAUDE.md). The short version:
-never fake presence, always cite the source, and no device-frame mockups.
+Crawls approved public zug.ch content, extracts and cleans it, chunks it with
+citation anchors, indexes it for hybrid semantic and keyword retrieval, and
+answers questions through Apertus using only what it retrieved. When the
+evidence does not support an answer it says so rather than guessing.
 
-## Where things live
+## Getting started
+
+```bash
+make setup            # venv, dependencies, .env from the template
+make secret           # generate SECRET_KEY, paste it into .env
+make up               # postgres with pgvector, redis, adminer, app, worker
+make migrate
+make bootstrap-admin  # the password must be changed at first login
+make apertus-check    # confirm your local Apertus endpoint
+```
+
+Application on `http://127.0.0.1:8000`, Adminer on `http://127.0.0.1:8081`.
+Both bind to loopback only.
+
+`make help` lists everything.
+
+## Repository
 
 ```
-shared/          identical for every canton
-└─ brand/        the Dumi mark, palette, type and motion tokens
-   └─ favicon/   the icon set every canton serves
-
-cantons/         one folder per canton
-└─ zug/          name, coat of arms, accent token, languages, content source
+app/
+  config.py       validated settings; refuses unsafe production configuration
+  db/             models and session handling
+  security/       Argon2id, sessions, authorisation, tamper-evident audit
+  llm/            the LLMProvider protocol and the Apertus provider
+  ingest/         allowlist, SSRF guards, crawler, extraction, chunking
+  retrieval/      embeddings, hybrid search, confidence policy, answering
+  evaluation/     adversarial and grounded evaluation cases
+  api/            chat surface and administration
+  templates/      server-rendered, works without JavaScript
+shared/brand/     the Dumi design system, served unchanged
+migrations/       Alembic
+docs/             architecture, security, privacy, operations, policy
 ```
 
-The split is deliberate. If a canton folder starts collecting layout or
-component code, that code belongs in `shared/` instead.
+## Principles the code enforces
 
-## Status
+- **No answer without evidence.** Insufficient evidence does not call the
+  model at all.
+- **Every factual answer cites its source.** An answer that produces no
+  citations is replaced.
+- **Retrieved content is untrusted**, including pages the canton published. It
+  never occupies the system role, the model has no tools, and the evidence
+  delimiter is random per request.
+- **The mark is the only status indicator.** No spinner, no typing dots.
+- **Nothing fakes presence.** It is a model and the interface says so.
 
-| Piece | State |
+## Documentation
+
+| Read first | |
 |---|---|
-| Brand, the Dumi mark | Draft 01. See [`shared/brand`](shared/brand) |
-| Favicon set | Done. See [`shared/brand/favicon`](shared/brand/favicon) |
-| Chat shell (launcher, consent gate, transcript, citations) | Not started |
-| Zug content source | Not started |
-| Accounts and sign-in | Out of scope for now |
+| [Known limitations](docs/known-limitations.md) | What does not work and what must not be claimed |
+| [Production readiness](docs/production-readiness.md) | About twenty blocking items, none ticked |
+| [Architecture](docs/architecture-assessment.md) | Decisions and the alternatives rejected |
+
+| Security and privacy | |
+|---|---|
+| [Threat model](docs/threat-model.md) · [Security controls](docs/security-controls.md) | |
+| [Privacy](docs/privacy.md) · [DPIA draft](docs/dpia-draft.md) · [Privacy notice](docs/privacy-notice.md) | Not reviewed by a qualified professional |
+
+| Operations | |
+|---|---|
+| [Deployment](docs/deployment.md) · [Apertus](docs/apertus.md) | |
+| [Operations](docs/runbook-operations.md) · [Incidents](docs/runbook-incident.md) · [Backups](docs/backup-recovery.md) | |
+
+| Policy and process | |
+|---|---|
+| [Crawler](docs/crawler-policy.md) · [Sources](docs/source-policy.md) | |
+| [Content lifecycle](docs/content-lifecycle.md) · [Contradiction review](docs/contradiction-review.md) | |
+
+| People | |
+|---|---|
+| [Administrator guide](docs/administrator-guide.md) · [Staff training](docs/staff-training.md) · [Support](docs/support-runbook.md) | |
+
+| Commercial | |
+|---|---|
+| [Proposed SLA](docs/sla-proposal.md) · [2-year](docs/maintenance-2-year.md) · [3-year](docs/maintenance-3-year.md) | Drafts, not agreements |
+
+| Accessibility | |
+|---|---|
+| [Accessibility report](docs/accessibility.md) | Not a conformance claim |
+
+Phase reports: [1](docs/architecture-assessment.md) ·
+[2](docs/phase-2-report.md) · [3](docs/phase-3-report.md) ·
+[4](docs/phase-4-report.md) · [5](docs/phase-5-report.md)
+
+## Tests
+
+```bash
+make test       # runs anywhere
+export TEST_DATABASE_URL=postgresql+psycopg://dumi:PASS@127.0.0.1:5432/dumi_test
+make test-all   # includes the database-backed tests
+make evaluate   # adversarial evaluation cases
+make security   # dependency audit, lint security rules, audit chain, config
+```
 
 ## Reference
 
 The Canton of Basel-Stadt runs a comparable assistant, **Alva**, at
-[bs.ch](https://www.bs.ch). Its structure is worth reading as prior art: a
-launcher orb, a consent gate before activation, canton branding on the left and
-assistant branding on the right, suggestion chips, cited sources, and per-answer
-feedback.
+[bs.ch](https://www.bs.ch). Worth reading as prior art.
