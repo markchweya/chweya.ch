@@ -273,7 +273,9 @@ class Document(Base, TimestampMixin):
     media_type: Mapped[str] = mapped_column(
         String(128), nullable=False, default="", server_default=""
     )
-    language: Mapped[str] = mapped_column(String(5), nullable=False, default="de")
+    language: Mapped[str] = mapped_column(
+        String(5), nullable=False, default="de", server_default="de"
+    )
 
     # Set by an administrator for uploads; official for crawled canton pages.
     publication_state: Mapped[str] = mapped_column(
@@ -439,7 +441,9 @@ class Chunk(Base, TimestampMixin):
     token_estimate: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
-    language: Mapped[str] = mapped_column(String(5), nullable=False, default="de")
+    language: Mapped[str] = mapped_column(
+        String(5), nullable=False, default="de", server_default="de"
+    )
 
     # --- citation anchors --------------------------------------------------
     # The heading trail this passage sits under, so a citation can say which
@@ -517,13 +521,27 @@ class CrawlRun(Base, TimestampMixin):
     started_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    urls_discovered: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    urls_fetched: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    urls_unchanged: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    urls_failed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    urls_blocked: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    documents_created: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    versions_created: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    urls_discovered: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    urls_fetched: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    urls_unchanged: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    urls_failed: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    urls_blocked: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    documents_created: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    versions_created: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
     # Counts of refusals by reason, so the dashboard can show why URLs were
     # skipped without storing every skipped URL.
