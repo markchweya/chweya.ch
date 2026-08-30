@@ -700,6 +700,76 @@ class TestSmallTalk:
         assert client.stub.calls == 1
 
 
+class TestFeedback:
+    """One thumb per answer, stored without the question."""
+
+    def test_a_vote_is_recorded(self, client, db) -> None:  # type: ignore[no-untyped-def]
+        from sqlalchemy import select
+
+        from app.db.models import AnswerFeedback
+
+        response = client.post(
+            "/feedback",
+            json={
+                "vote": "down",
+                "language": "de",
+                "confidence": "medium",
+                "is_refusal": False,
+                "citations": ["https://www.zug.ch/behoerden/anmeldung"],
+            },
+        )
+        assert response.status_code == 204
+        rows = db.execute(select(AnswerFeedback)).scalars().all()
+        assert len(rows) == 1
+        assert rows[0].vote == "down"
+        assert rows[0].language == "de"
+        assert rows[0].confidence == "medium"
+        assert rows[0].citation_urls == ["https://www.zug.ch/behoerden/anmeldung"]
+
+    def test_an_unknown_vote_is_refused(self, client, db) -> None:  # type: ignore[no-untyped-def]
+        from sqlalchemy import select
+
+        from app.db.models import AnswerFeedback
+
+        response = client.post("/feedback", json={"vote": "sideways"})
+        assert response.status_code == 422
+        assert db.execute(select(AnswerFeedback)).scalars().all() == []
+
+    def test_nothing_beyond_the_known_fields_is_stored(self, client, db) -> None:  # type: ignore[no-untyped-def]
+        """The question must never be stored, so the endpoint reads only the
+        fields it knows. A question smuggled into the body, a made-up
+        confidence and a non-https URL all vanish."""
+        from sqlalchemy import select
+
+        from app.db.models import AnswerFeedback
+
+        response = client.post(
+            "/feedback",
+            json={
+                "vote": "up",
+                "question": "wie hoch ist meine Steuerschuld",
+                "confidence": "certain",
+                "citations": ["javascript:alert(1)", "https://www.zug.ch/ok"],
+            },
+        )
+        assert response.status_code == 204
+        row = db.execute(select(AnswerFeedback)).scalars().one()
+        assert row.confidence == ""
+        assert row.citation_urls == ["https://www.zug.ch/ok"]
+        assert not hasattr(row, "question")
+
+    def test_the_answer_payload_carries_the_feedback_labels(self, client) -> None:  # type: ignore[no-untyped-def]
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        labels = payload["labels"]
+        assert labels["feedback_up"] == "Gute Antwort"
+        assert labels["feedback_down"] == "Nicht hilfreich"
+        assert labels["feedback_thanks"] == "Danke für Ihre Rückmeldung."
+
+
 def read_sse(client, question: str, *, lang: str = "de") -> list[dict]:  # type: ignore[no-untyped-def]
     """POST with a stream Accept header and return the decoded events."""
     import json as jsonlib

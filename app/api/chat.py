@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -126,6 +126,9 @@ def _answer_payload(answer: Answer, language: str) -> dict[str, Any]:
             "sources": t("answer.sources", language),
             "source_language": t("answer.source_language_note", language),
             "last_checked": t("answer.last_checked", language),
+            "feedback_up": t("feedback.up", language),
+            "feedback_down": t("feedback.down", language),
+            "feedback_thanks": t("feedback.thanks", language),
         },
         # Never returned to the client: reasons name internal policy signals
         # and would leak how retrieval is scored. They go to the log instead.
@@ -383,6 +386,66 @@ async def ask(
         name="chat.html",
         context=_template_context(request, language, messages),
     )
+
+
+@router.post("/feedback")
+async def feedback(
+    request: Request,
+    session: Session = Depends(db_session),
+) -> Any:
+    """Record one thumbs up or down on an answer.
+
+    Deliberately narrow: the body carries the vote and the answer's coarse
+    shape, and nothing else is read from it. The question is never sent and
+    never stored, which is the section 18 rule; anything unexpected in the
+    body is ignored rather than persisted.
+    """
+    from app.db.models import AnswerFeedback
+
+    settings = get_settings()
+    limiter = _limiter_for(settings.rate_limit_chat_per_minute)
+    decision = limiter.check(client_key(request.client.host if request.client else None))
+    if not decision.allowed:
+        return JSONResponse(
+            {"detail": "too_many_requests"},
+            status_code=429,
+            headers={"Retry-After": str(decision.retry_after_seconds)},
+        )
+
+    try:
+        body = await request.json()
+    except ValueError:
+        body = {}
+
+    vote = body.get("vote")
+    if vote not in ("up", "down"):
+        return JSONResponse({"detail": "vote_must_be_up_or_down"}, status_code=422)
+
+    confidence = str(body.get("confidence", ""))
+    if confidence not in ("high", "medium", "low", "insufficient"):
+        confidence = ""
+
+    # Only well-formed https URLs are kept, and only a handful: the citations
+    # of one answer, not an arbitrary list a client chooses to send.
+    urls = []
+    for url in body.get("citations", [])[:12]:
+        if isinstance(url, str) and url.startswith("https://") and len(url) <= 2048:
+            urls.append(url)
+
+    session.add(
+        AnswerFeedback(
+            vote=vote,
+            language=normalise_language(str(body.get("language", ""))),
+            confidence=confidence,
+            is_refusal=bool(body.get("is_refusal", False)),
+            citation_urls=urls,
+        )
+    )
+    session.commit()
+
+    # Coarse by design; the log must not become a record of what was asked.
+    logger.info("feedback.recorded", vote=vote, confidence=confidence or "unknown")
+    return Response(status_code=204)
 
 
 _LIMITERS: dict[int, Any] = {}

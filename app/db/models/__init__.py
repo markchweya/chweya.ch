@@ -19,6 +19,7 @@ from app.db.models.content import (
     Source,
     SourceKind,
 )
+from app.db.models.feedback import AnswerFeedback
 from app.db.models.review import ContradictionFinding, ContradictionKind, ReviewState
 from app.db.models.system import SettingKey, SystemSetting, get_setting, set_setting
 from app.db.models.upload import UploadJob, UploadState
@@ -27,6 +28,7 @@ from app.db.models.user import ROLE_DESCRIPTIONS, Role, RoleName, User, UserRole
 __all__ = [
     "GENESIS_HASH",
     "ROLE_DESCRIPTIONS",
+    "AnswerFeedback",
     "AuditAction",
     "AuditEvent",
     "AuditOutcome",

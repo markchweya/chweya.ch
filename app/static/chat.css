@@ -328,6 +328,47 @@ html:has(#transcript)::-webkit-scrollbar { display: none; }
 .sources__lang::before { content: "· "; }
 .sources__date::before { content: "· "; }
 
+/* --- feedback ------------------------------------------------------------ */
+.feedback {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+.feedback__button {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--dumi-ink-soft);
+  cursor: pointer;
+}
+.feedback__button:hover { background: var(--dumi-ground); color: var(--dumi-ink); }
+.feedback__button[aria-pressed="true"] { color: var(--dumi-flow); }
+.feedback__button:disabled { cursor: default; }
+.feedback__button:disabled:hover { background: none; }
+
+/* The transient thanks after a vote. It appears, waits, and leaves; no
+ * animation, which keeps the mark the only thing on the page that moves. */
+.toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 0.7rem 1.2rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: 999px;
+  background: var(--dumi-surface);
+  color: var(--dumi-ink);
+  font-size: 0.9375rem;
+  box-shadow: 0 8px 24px rgb(var(--dumi-deep-rgb) / 0.15);
+}
+
 /* --- composer ------------------------------------------------------------
    The field and its send button share one rounded container, the way a
    terminal prompt is one line. Two bordered pills sitting side by side read

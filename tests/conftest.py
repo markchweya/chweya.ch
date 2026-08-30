@@ -63,8 +63,8 @@ def db(engine) -> Iterator[Session]:  # type: ignore[no-untyped-def]
     session = factory()
     session.execute(
         text(
-            "TRUNCATE audit_events, user_sessions, user_roles, users, system_settings "
-            "RESTART IDENTITY CASCADE"
+            "TRUNCATE answer_feedback, audit_events, user_sessions, user_roles, users, "
+            "system_settings RESTART IDENTITY CASCADE"
         )
     )
     session.commit()

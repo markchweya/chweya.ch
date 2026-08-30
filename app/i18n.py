@@ -458,6 +458,24 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Dumi peut faire des erreurs. Veuillez vérifier les informations importantes sur",
         "it": "Dumi può commettere errori. Verifichi le informazioni importanti su",
     },
+    "feedback.up": {
+        "de": "Gute Antwort",
+        "en": "Good answer",
+        "fr": "Bonne réponse",
+        "it": "Buona risposta",
+    },
+    "feedback.down": {
+        "de": "Nicht hilfreich",
+        "en": "Not helpful",
+        "fr": "Pas utile",
+        "it": "Non utile",
+    },
+    "feedback.thanks": {
+        "de": "Danke für Ihre Rückmeldung.",
+        "en": "Thank you for your feedback.",
+        "fr": "Merci pour votre retour.",
+        "it": "Grazie per il suo riscontro.",
+    },
     "error.too_many_requests": {
         "de": "Zu viele Anfragen. Bitte warten Sie einen Moment.",
         "en": "Too many requests. Please wait a moment.",

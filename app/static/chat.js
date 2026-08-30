@@ -207,6 +207,76 @@
     body.appendChild(section);
   }
 
+  // One transient confirmation, reused by every toast. role="status" so the
+  // thanks is announced as well as shown. No animation: it appears, waits,
+  // and leaves.
+  function showToast(text) {
+    var toast = document.getElementById("toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "toast";
+      toast.className = "toast";
+      toast.setAttribute("role", "status");
+      document.body.appendChild(toast);
+    }
+    toast.textContent = text;
+    toast.hidden = false;
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(function () { toast.hidden = true; }, 2500);
+  }
+
+  function renderFeedback(body, payload) {
+    var labels = payload.labels || {};
+    if (!labels.feedback_up) return;
+    var row = document.createElement("div");
+    row.className = "feedback";
+
+    function thumbButton(vote, label, path) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "feedback__button";
+      button.title = label;
+      button.setAttribute("aria-pressed", "false");
+      var name = document.createElement("span");
+      name.className = "visually-hidden";
+      name.textContent = label;
+      button.appendChild(name);
+      button.insertAdjacentHTML(
+        "beforeend",
+        '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"' +
+        ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        path + "</svg>"
+      );
+      button.addEventListener("click", function () {
+        // One vote per answer. The buttons lock before the request, so a
+        // double click cannot record twice.
+        row.querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+        button.setAttribute("aria-pressed", "true");
+        fetch("/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            vote: vote,
+            language: payload.language,
+            confidence: payload.confidence,
+            is_refusal: payload.is_refusal,
+            citations: (payload.citations || [])
+              .map(function (c) { return c.url; })
+              .filter(Boolean)
+          })
+        }).catch(function () {});
+        showToast(labels.feedback_thanks || "");
+      });
+      return button;
+    }
+
+    row.appendChild(thumbButton("up", labels.feedback_up,
+      '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>'));
+    row.appendChild(thumbButton("down", labels.feedback_down,
+      '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>'));
+    body.appendChild(row);
+  }
+
   function renderNotices(body, notices) {
     (notices || []).forEach(function (notice) {
       var paragraph = document.createElement("p");
@@ -269,6 +339,7 @@
       }
       renderCitations(shell.body, payload.citations, payload.labels || {});
       renderNotices(shell.body, payload.notices);
+      renderFeedback(shell.body, payload);
       status.textContent = "";
     }
 

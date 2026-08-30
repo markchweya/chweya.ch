@@ -52,7 +52,10 @@ against nothing.
 ### Administration
 - Index versioning, atomic promotion and rollback.
 - User management.
-- Feedback capture.
+- A feedback review view. Thumbs on answers are stored (vote, language,
+  confidence, refusal flag and cited URLs; never the question or the answer
+  text), but nothing in the administration reads the table yet. Feedback is
+  also not tied to a specific answer, because answers are not stored.
 
 ### Security
 - Multi-factor authentication.
