@@ -30,6 +30,19 @@ config.set_main_option("sqlalchemy.url", str(get_settings().database_url))
 target_metadata = Base.metadata
 
 
+def render_item(type_: str, obj: object, autogen_context) -> str | bool:  # type: ignore[no-untyped-def]
+    """Emit the import pgvector column types need.
+
+    Alembic renders pgvector.sqlalchemy.Vector into the migration but does not
+    add the import, so the generated file raises NameError on first run. This
+    hook adds it. Returning False lets the default renderer handle everything
+    else.
+    """
+    if type_ == "type" and obj.__class__.__module__.startswith("pgvector"):
+        autogen_context.imports.add("import pgvector.sqlalchemy")
+    return False
+
+
 def run_migrations_offline() -> None:
     """Emit SQL to stdout without connecting.
 
@@ -61,6 +74,7 @@ def run_migrations_online() -> None:
             # default and which then silently diverge between environments.
             compare_type=True,
             compare_server_default=True,
+            render_item=render_item,
         )
         with context.begin_transaction():
             context.run_migrations()

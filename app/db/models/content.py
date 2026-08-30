@@ -20,6 +20,7 @@ import datetime as dt
 import uuid
 from enum import StrEnum
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -31,11 +32,28 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, uuid_pk
+
+# The width of the embedding column. Fixed at migration time: PostgreSQL
+# vector columns have a declared dimension, so changing the embedding model to
+# one with a different output size requires a migration and a re-embed, not a
+# configuration change. Kept in step with EMBEDDING_DIMENSIONS.
+EMBEDDING_DIMENSIONS = 768
+
+# Maps a chunk's language to the PostgreSQL text search configuration that
+# stems it correctly. Without the right configuration, German compound words
+# and French elisions are indexed as-is and a query never matches them.
+TEXT_SEARCH_CONFIG: dict[str, str] = {
+    "de": "german",
+    "en": "english",
+    "fr": "french",
+    "it": "italian",
+}
+DEFAULT_TEXT_SEARCH_CONFIG = "simple"
 
 
 class SourceKind(StrEnum):
@@ -409,6 +427,24 @@ class Chunk(Base, TimestampMixin):
     # a citation link lands on the passage rather than the top of the page.
     anchor: Mapped[str | None] = mapped_column(String(256), nullable=True)
 
+    # --- retrieval ---------------------------------------------------------
+    # The semantic arm of hybrid search. Nullable because a chunk exists
+    # before it is embedded, and an embedding run can fail without losing the
+    # text.
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(EMBEDDING_DIMENSIONS), nullable=True
+    )
+    # Which model produced the vector. Vectors from two models are not
+    # comparable, so mixing them silently degrades every result, and a model
+    # change has to be detectable rather than inferred from a deployment date.
+    embedding_model: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+    # The keyword arm. Populated at write time with the PostgreSQL text search
+    # configuration matching the chunk's language, rather than by a generated
+    # column, because a generated column can only carry one fixed
+    # configuration and this system indexes four languages.
+    search_vector: Mapped[str | None] = mapped_column(TSVECTOR, nullable=True)
+
     version: Mapped[DocumentVersion] = relationship(back_populates="chunks")
 
     __table_args__ = (
@@ -416,6 +452,9 @@ class Chunk(Base, TimestampMixin):
         Index("ix_chunks_version_id", "version_id"),
         Index("ix_chunks_document_id", "document_id"),
         Index("ix_chunks_language", "language"),
+        # GIN for full-text search. Created in the migration rather than here
+        # because it needs a postgresql_using clause.
+        Index("ix_chunks_search_vector", "search_vector", postgresql_using="gin"),
     )
 
     def __repr__(self) -> str:
