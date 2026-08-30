@@ -10,7 +10,6 @@ from __future__ import annotations
 import socket
 
 import httpx
-import pytest
 
 from app.config import Settings
 from app.ingest.fetcher import GuardedFetcher, HostRateLimiter, detect_type

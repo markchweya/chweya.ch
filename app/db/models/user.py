@@ -26,7 +26,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -102,14 +102,18 @@ class User(Base, TimestampMixin):
     # Stored lower-case. Compared case-insensitively so that one person cannot
     # hold two accounts differing only in capitalisation.
     email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True)
-    display_name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    display_name: Mapped[str] = mapped_column(
+        String(200), nullable=False, default="", server_default=""
+    )
 
     # Argon2id encoded hash, including its parameters and salt. Never returned
     # by any endpoint or shown in the administration interface.
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     # Recorded so that a future algorithm change can rehash on next login
     # without guessing what produced an existing hash.
-    password_algorithm: Mapped[str] = mapped_column(String(32), nullable=False, default="argon2id")
+    password_algorithm: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="argon2id", server_default="argon2id"
+    )
     password_changed_at: Mapped[dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -155,7 +159,11 @@ class User(Base, TimestampMixin):
     )
 
     __table_args__ = (
-        Index("ix_users_email_lower", "email", unique=True),
+        # Declared as the expression the migration actually creates. Writing
+        # it as a plain column here made autogenerate propose dropping the
+        # functional index and rebuilding it on email, which would have
+        # silently removed case-insensitive uniqueness.
+        Index("ix_users_email_lower", text("lower(email)"), unique=True),
         Index("ix_users_is_active", "is_active"),
     )
 
@@ -200,7 +208,8 @@ class UserRole(Base):
     granted_by: Mapped[User | None] = relationship(foreign_keys=[granted_by_id])
     role: Mapped[Role] = relationship(back_populates="users")
 
-    __table_args__ = (UniqueConstraint("user_id", "role_id", name="uq_user_roles_user_id_role_id"),)
+    # No extra unique constraint: (user_id, role_id) is already the primary
+    # key, and a second one on the same columns is duplicated enforcement.
 
 
 class UserSession(Base):

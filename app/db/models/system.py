@@ -44,7 +44,7 @@ class SystemSetting(Base, TimestampMixin):
     value: Mapped[str] = mapped_column(Text, nullable=False)
     # Free-text note explaining why the value is what it is, so an operator
     # reading the table later is not left guessing.
-    note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
 
     updated_by_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True

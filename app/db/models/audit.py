@@ -137,7 +137,9 @@ class AuditEvent(Base):
     # A stable label for the actor, retained even if the user row is later
     # removed. Holds an opaque identifier or a system component name, never an
     # email address, so that pruning a user does not leave personal data here.
-    actor_label: Mapped[str] = mapped_column(String(120), nullable=False, default="system")
+    actor_label: Mapped[str] = mapped_column(
+        String(120), nullable=False, default="system", server_default="system"
+    )
 
     action: Mapped[str] = mapped_column(String(64), nullable=False)
     outcome: Mapped[str] = mapped_column(String(16), nullable=False)

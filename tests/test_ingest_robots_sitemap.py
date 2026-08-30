@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import pytest
-
 from app.ingest.robots import RobotsCache, parse_robots
 from app.ingest.sitemap import discover, parse_sitemap
 
