@@ -75,6 +75,24 @@ body {
   background: var(--dumi-surface);
 }
 
+.bar__controls { display: flex; align-items: center; gap: 0.5rem; }
+
+/* Icon controls in the header: 44px targets, named by hidden text. */
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--dumi-ink-soft);
+  cursor: pointer;
+  font: inherit;
+}
+.icon-button:hover { background: var(--dumi-ground); color: var(--dumi-ink); }
+
 .langs { display: flex; gap: 0.25rem; }
 .langs a {
   /* 44px minimum touch target, WCAG 2.2 Target Size (Minimum). */

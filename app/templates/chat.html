@@ -8,6 +8,19 @@
     Dumi
   </span>
 
+  <div class="bar__controls">
+  {# A fresh chat is a fresh page: nothing is stored server-side, and users
+     do not log in, so there is no history to manage. An icon-only control,
+     with its name as real hidden text and a title for pointer users. #}
+  <a class="icon-button" href="/?lang={{ language }}" title="{{ t('chat.new_chat') }}">
+    <span class="visually-hidden">{{ t('chat.new_chat') }}</span>
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 20h9"/>
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+    </svg>
+  </a>
+
   {# The language selector is a real form, so it works without JavaScript and
      is operable by keyboard. aria-current marks the active option, so the
      choice is conveyed by more than colour. #}
@@ -19,6 +32,7 @@
          {% if code == language %}aria-current="true"{% endif %}>{{ label }}</a>
     {% endfor %}
   </nav>
+  </div>
 </header>
 
 {# The section 22 disclosure banner was removed from this page at the project

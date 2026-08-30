@@ -404,6 +404,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Langue",
         "it": "Lingua",
     },
+    "chat.new_chat": {
+        "de": "Neuer Chat",
+        "en": "New chat",
+        "fr": "Nouveau chat",
+        "it": "Nuova chat",
+    },
     "chat.intro": {
         "de": (
             "Ich heisse Dumi. Ich beantworte Fragen zu den öffentlichen "

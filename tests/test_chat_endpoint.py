@@ -253,6 +253,13 @@ class TestChatPage:
         assert 'id="hero"' not in html
         assert 'class="suggestion"' not in html
 
+    def test_a_new_chat_control_exists_and_keeps_the_language(self, client) -> None:  # type: ignore[no-untyped-def]
+        """An icon-only link: nothing is stored server-side, so a new chat
+        is simply the page again, in the language already chosen."""
+        html = client.get("/", headers={"Accept-Language": "fr"}).text
+        assert 'href="/?lang=fr"' in html
+        assert "Nouveau chat" in html
+
     def test_the_form_carries_the_localized_script_strings(self, client) -> None:  # type: ignore[no-untyped-def]
         """The script shows the waiting sentence and the failed-stream
         message from data attributes. Without them the status region was
