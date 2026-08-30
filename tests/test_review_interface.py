@@ -24,7 +24,6 @@ from app.db.models import (
     AuditEvent,
     ContentStatus,
     ContradictionFinding,
-    Document,
     DocumentVersion,
     ReviewState,
     Role,
