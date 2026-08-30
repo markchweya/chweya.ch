@@ -23,6 +23,7 @@ from app.config import Environment, get_settings
 from app.middleware import (
     RequestIdMiddleware,
     SecurityHeadersMiddleware,
+    auth_redirect_handler,
     unhandled_exception_handler,
 )
 from app.observability import configure_logging, get_logger
@@ -98,6 +99,11 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
 
     app.add_exception_handler(Exception, unhandled_exception_handler)
+    # Browsers navigating to an admin page without a session get the
+    # sign-in page; API callers keep their status codes.
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+
+    app.add_exception_handler(StarletteHTTPException, auth_redirect_handler)
 
     # The Dumi design system is served unchanged from shared/brand. It is not
     # copied into the application: one canonical copy means the interface and

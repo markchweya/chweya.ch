@@ -274,3 +274,24 @@ class TestLogout:
         client.post("/admin/logout")
         # Server-side revocation, so a retained cookie is useless.
         assert client.get("/admin").status_code == 401
+
+
+class TestBrowserRedirects:
+    """A browser without a session lands on the sign-in page, not raw JSON."""
+
+    def test_a_browser_is_redirected_to_the_login_page(self, client) -> None:  # type: ignore[no-untyped-def]
+        response = client.get("/admin/sources", headers={"Accept": "text/html"})
+        assert response.status_code == 303
+        assert response.headers["location"] == "/admin/login"
+
+    def test_an_api_caller_keeps_its_status_code(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The chat script and any API client act on the 401; only a
+        navigation gets redirected."""
+        response = client.get("/admin/sources", headers={"Accept": "application/json"})
+        assert response.status_code == 401
+
+    def test_a_forced_password_change_redirects_to_the_password_page(self, client, admin) -> None:  # type: ignore[no-untyped-def]
+        client.post("/admin/login", data={"email": "admin@example.ch", "password": BOOTSTRAP})
+        response = client.get("/admin/sources", headers={"Accept": "text/html"})
+        assert response.status_code == 303
+        assert response.headers["location"] == "/admin/password"

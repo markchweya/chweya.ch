@@ -136,3 +136,35 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         # The header carries it too, matching every non-error response.
         headers={"X-Request-ID": request_id} if request_id else None,
     )
+
+
+async def auth_redirect_handler(request: Request, exc: Exception) -> Response:
+    """Send a browser to the sign-in page instead of showing it raw JSON.
+
+    The authentication dependencies raise HTTP errors, which is right for a
+    fetch call: the chat script and any API client get a status code they can
+    act on. A person navigating with a browser gets {"detail":
+    "login_required"} on a black page, which tells them nothing. The Accept
+    header distinguishes the two: a navigation asks for text/html, a fetch
+    does not.
+    """
+    from fastapi.exception_handlers import http_exception_handler
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+    from starlette.responses import RedirectResponse
+
+    # Registered for StarletteHTTPException only; anything else goes to the
+    # default handler untouched.
+    if isinstance(exc, StarletteHTTPException):
+        wants_html = "text/html" in (request.headers.get("Accept") or "")
+        if wants_html and exc.status_code == 401 and exc.detail == "login_required":
+            return RedirectResponse("/admin/login", status_code=303)
+        if (
+            wants_html
+            and exc.status_code == 403
+            and exc.detail == "password_change_required"
+        ):
+            # The account exists but must set its own password first; the
+            # page for that is the only one it may reach.
+            return RedirectResponse("/admin/password", status_code=303)
+
+    return await http_exception_handler(request, exc)  # type: ignore[arg-type]
