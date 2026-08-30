@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from sqlalchemy.orm import Session
 
 from app.i18n import DEFAULT_LANGUAGE, normalise_language, t
+from app.ingest.contradictions import open_findings_for_chunks
 from app.llm.base import LLMError, LLMProvider
 from app.observability import get_logger
 from app.retrieval.embeddings import EmbeddingProvider
@@ -176,6 +177,10 @@ def _notices_for(assessment: EvidenceAssessment) -> list[str]:
         notices.append("answer.emergency")
     if assessment.risk_topics:
         notices.append("answer.high_risk")
+    if "sources_inconsistent" in assessment.reasons:
+        # Section 9: the inconsistency between official sources is disclosed
+        # to the person, not silently absorbed into a lower confidence.
+        notices.append("answer.sources_inconsistent")
     # Medium and low confidence used to add a "confirm this with the cited
     # office" banner above every such answer. Removed: the sources block
     # carries the links to check against, the confidence still reaches the
@@ -213,7 +218,20 @@ async def answer_question(
         )
 
     result = search(session, embedder, question)
-    assessment = assess(result, question, answer_language=answer_language)
+
+    # Section 9: an answer drawing on a passage with an unresolved
+    # contradiction finding must say the official sources appear inconsistent
+    # and lower its confidence. The count comes from the review queue, so the
+    # moment a reviewer resolves the finding the qualification disappears.
+    contradicted = open_findings_for_chunks(
+        session, [chunk.chunk_id for chunk in result.chunks]
+    )
+    assessment = assess(
+        result,
+        question,
+        answer_language=answer_language,
+        open_contradictions=contradicted,
+    )
 
     if not should_call_model(assessment):
         # Fixed text, not generated. Asking a model to explain that it has no

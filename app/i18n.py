@@ -146,6 +146,32 @@ STRINGS: dict[str, dict[str, str]] = {
             "Sostegno: 143 (Telefono Amico), 147 (per bambini e giovani)."
         ),
     },
+    "answer.sources_inconsistent": {
+        "de": (
+            "Die offiziellen Quellen zu dieser Frage scheinen sich zu "
+            "widersprechen. Die Angaben werden derzeit geprüft. Bitte "
+            "verlassen Sie sich nicht auf eine einzelne Angabe und fragen Sie "
+            "im Zweifel bei der zuständigen Stelle nach."
+        ),
+        "en": (
+            "The official sources for this question appear to contradict each "
+            "other. The information is being reviewed. Please do not rely on "
+            "a single figure and check with the responsible office if in "
+            "doubt."
+        ),
+        "fr": (
+            "Les sources officielles concernant cette question semblent se "
+            "contredire. Les informations sont en cours de vérification. Ne "
+            "vous fiez pas à une seule indication et renseignez-vous auprès "
+            "du service compétent en cas de doute."
+        ),
+        "it": (
+            "Le fonti ufficiali su questa domanda sembrano contraddirsi. Le "
+            "informazioni sono in fase di verifica. Non fate affidamento su "
+            "una singola indicazione e in caso di dubbio rivolgetevi "
+            "all'ufficio competente."
+        ),
+    },
     "answer.sources": {
         "de": "Quellen",
         "en": "Sources",
@@ -522,6 +548,49 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Please give a reason.",
         "fr": "Veuillez indiquer un motif.",
         "it": "Indicare un motivo.",
+    },
+    # --- contradiction review ----------------------------------------------
+    "review.unknown_outcome": {
+        "de": "Diese Entscheidung gibt es nicht.",
+        "en": "That is not one of the available decisions.",
+        "fr": "Cette décision n'existe pas.",
+        "it": "Questa decisione non esiste.",
+    },
+    "review.already_decided": {
+        "de": "Dieser Befund wurde bereits entschieden.",
+        "en": "This finding has already been decided.",
+        "fr": "Ce constat a déjà été tranché.",
+        "it": "Questo caso è già stato deciso.",
+    },
+    "review.not_open": {
+        "de": "Dieser Befund ist nicht offen.",
+        "en": "This finding is not open.",
+        "fr": "Ce constat n'est pas ouvert.",
+        "it": "Questo caso non è aperto.",
+    },
+    "review.note_required": {
+        "de": (
+            "Bitte begründen Sie die Entscheidung. Wenn Inhalte aus dem Index "
+            "entfernt werden, muss der Grund festgehalten sein."
+        ),
+        "en": (
+            "Please give a reason. A decision that removes content from the "
+            "index must have its reason on record."
+        ),
+        "fr": (
+            "Veuillez motiver la décision. Le retrait de contenus de l'index "
+            "doit être justifié par écrit."
+        ),
+        "it": (
+            "Motivare la decisione. La rimozione di contenuti dall'indice "
+            "richiede una motivazione registrata."
+        ),
+    },
+    "review.detection_completed": {
+        "de": "Die Prüfung ist abgeschlossen. Neue Befunde stehen in der Liste.",
+        "en": "Detection has finished. New findings appear in the list.",
+        "fr": "La détection est terminée. Les nouveaux constats figurent dans la liste.",
+        "it": "Il rilevamento è terminato. I nuovi casi compaiono nell'elenco.",
     },
     "upload.delete.already_deleted": {
         "de": "Dieser Upload wurde bereits gelöscht.",

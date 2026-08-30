@@ -195,6 +195,7 @@ def assess(
     *,
     answer_language: str = "de",
     now: dt.datetime | None = None,
+    open_contradictions: int = 0,
 ) -> EvidenceAssessment:
     """Decide how far the retrieved evidence supports an answer.
 
@@ -269,6 +270,15 @@ def assess(
     if any(chunk.extraction_quality in ("low", "partial") for chunk in chunks):
         confidence = min(confidence, Confidence.MEDIUM, key=_severity)
         reasons.append("imperfect_text_extraction")
+
+    if open_contradictions > 0:
+        # A passage in the evidence is party to an unresolved contradiction
+        # finding. The system does not know which official statement is
+        # current, so the answer must not pretend to. Section 9 requires the
+        # inconsistency be disclosed, which the notice built from this reason
+        # does.
+        confidence = min(confidence, Confidence.LOW, key=_severity)
+        reasons.append("sources_inconsistent")
 
     if any(chunk.injection_flagged for chunk in chunks):
         # Content flagged for instruction-shaped text reached the index, which
