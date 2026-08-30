@@ -27,7 +27,13 @@ from sqlalchemy.orm import Session
 
 from app.i18n import DEFAULT_LANGUAGE, normalise_language, t
 from app.ingest.contradictions import open_findings_for_chunks
-from app.llm.base import LLMError, LLMProvider
+from app.llm.base import (
+    ChatMessage,
+    GenerationRequest,
+    LLMError,
+    LLMProvider,
+    Role,
+)
 from app.observability import get_logger
 from app.retrieval.embeddings import EmbeddingProvider
 from app.retrieval.evidence import Confidence, EvidenceAssessment, RiskTopic, assess
@@ -234,6 +240,56 @@ def strip_markup(text: str) -> str:
     return text.replace("**", "")
 
 
+# What the prompt tells the model to reply when the passages do not answer
+# the question. A model left to write its own "I could not find this" prose
+# produces meta-text with pasted links and no citations, which the citation
+# check then throws away. The sentinel routes that case to the fixed refusal,
+# which is honest and arrives with the retrieved pages attached.
+NO_ANSWER_SENTINEL = "NO_ANSWER"
+
+
+def is_no_answer(text: str) -> bool:
+    """Whether a generated response declares the evidence insufficient."""
+    return text.strip().lstrip('"\'').upper().startswith(NO_ANSWER_SENTINEL)
+
+
+# Sent back to the model, once, when it answered without citing. A small
+# quantised model ignores the citation instruction often enough that giving
+# up on the first miss throws away real answers; one corrective turn recovers
+# most of them, and a second failure falls through to the honest refusal.
+_CITATION_CORRECTION = (
+    "Your answer was rejected because it contains no bracketed passage "
+    "numbers. Write the answer again, and put the number of the supporting "
+    "passage, like [1], after every factual statement. If the passages do "
+    "not answer the question, reply with exactly NO_ANSWER."
+)
+
+
+def needs_citation_retry(text: str, prepared: PreparedAnswer) -> bool:
+    """Whether a response should be regenerated with the correction turn."""
+    cleaned = strip_markup(text)
+    if is_no_answer(cleaned):
+        return False
+    _, kept, _ = validate_citations(cleaned, len(prepared.prompt.cited_chunks))
+    return not kept
+
+
+def correction_request(prepared: PreparedAnswer, first_text: str) -> GenerationRequest:
+    """The retry conversation: the original prompt, the model's uncited
+    answer, and the correction."""
+    original = prepared.prompt.request
+    return GenerationRequest(
+        messages=[
+            *original.messages,
+            ChatMessage(role=Role.ASSISTANT, content=first_text),
+            ChatMessage(role=Role.USER, content=_CITATION_CORRECTION),
+        ],
+        max_output_tokens=original.max_output_tokens,
+        temperature=original.temperature,
+        stop=original.stop,
+    )
+
+
 def validate_citations(text: str, available: int) -> tuple[str, list[int], list[int]]:
     """Remove citation markers that name passages which were not supplied.
 
@@ -430,6 +486,23 @@ def finalise_answer(text: str, was_truncated: bool, prepared: PreparedAnswer) ->
 
     all_citations = _build_citations(prompt, answer_language)
 
+    if is_no_answer(cleaned):
+        # The model followed the instruction for passages that do not answer
+        # the question. The person sees the fixed refusal, in their language,
+        # with the retrieved pages attached so the nearest official material
+        # is one click away.
+        logger.info("answer.model_reported_no_answer")
+        return Answer(
+            text=t("answer.insufficient_evidence", answer_language),
+            language=answer_language,
+            confidence=Confidence.INSUFFICIENT,
+            citations=all_citations,
+            risk_topics=assessment.risk_topics,
+            reasons=(*assessment.reasons, "model_reported_no_answer"),
+            notices=_notices_for(assessment),
+            is_refusal=True,
+        )
+
     if not kept:
         # The model answered without citing anything, so its text cannot be
         # shown as sourced and is withheld. What replaces it must be honest:
@@ -492,7 +565,18 @@ async def answer_question(
     except LLMError as exc:
         return _unavailable(prepared.answer_language, exc)
 
-    return finalise_answer(generated.text, generated.was_truncated, prepared)
+    text, was_truncated = generated.text, generated.was_truncated
+    if needs_citation_retry(text, prepared):
+        logger.info("answer.citation_retry")
+        try:
+            second = await llm.generate(correction_request(prepared, text))
+            text, was_truncated = second.text, second.was_truncated
+        except LLMError:
+            # The first response exists; finalise it and let the uncited
+            # fallback handle it rather than reporting the model unavailable.
+            pass
+
+    return finalise_answer(text, was_truncated, prepared)
 
 
 async def stream_answer(
@@ -527,20 +611,56 @@ async def stream_answer(
         yield ("answer", prepared)
         return
 
+    # Deltas are held back until the response is known not to be the
+    # NO_ANSWER sentinel. Streaming the word NO_ANSWER to the screen and then
+    # swapping it for the refusal would read as a malfunction; once the first
+    # characters diverge from the sentinel, the held text is released and the
+    # stream flows normally.
     accumulated: list[str] = []
+    held: list[str] = []
+    gate_open = False
+    suppress = False
     try:
         async for chunk in llm.stream(prepared.prompt.request):
             if chunk.done:
                 break
-            if chunk.text:
-                accumulated.append(chunk.text)
-                yield ("delta", chunk.text)
+            if not chunk.text:
+                continue
+            accumulated.append(chunk.text)
+            if suppress:
+                continue
+            if not gate_open:
+                head = strip_markup("".join(accumulated)).lstrip().upper()
+                if head.startswith(NO_ANSWER_SENTINEL):
+                    suppress = True
+                    held.clear()
+                    continue
+                if NO_ANSWER_SENTINEL.startswith(head):
+                    held.append(chunk.text)
+                    continue
+                gate_open = True
+                for text in held:
+                    yield ("delta", text)
+                held.clear()
+            yield ("delta", chunk.text)
     except LLMError as exc:
         yield ("answer", _unavailable(prepared.answer_language, exc))
         return
+
+    text = "".join(accumulated)
+    if needs_citation_retry(text, prepared):
+        # The retry is generated whole rather than streamed: the person is
+        # already reading the first attempt, and the final event replaces it
+        # either way.
+        logger.info("answer.citation_retry")
+        try:
+            second = await llm.generate(correction_request(prepared, text))
+            text = second.text
+        except LLMError:
+            pass
 
     # The wire protocol does not carry a finish reason for streams, so
     # truncation cannot be detected here; the output-token limit is the
     # provider's to enforce and the qualification note is only added on the
     # unstreamed path.
-    yield ("answer", finalise_answer("".join(accumulated), False, prepared))
+    yield ("answer", finalise_answer(text, False, prepared))

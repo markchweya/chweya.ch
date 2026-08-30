@@ -73,6 +73,9 @@ class StubLLM:
     """A language model that returns exactly what a test needs."""
 
     text: str = "Die Anmeldung kostet CHF 20.-- pro Person [1]."
+    # What the second call returns, for tests of the citation retry. None
+    # means every call answers with `text`.
+    retry_text: str | None = None
     fail: bool = False
     truncated: bool = False
     calls: int = 0
@@ -88,8 +91,11 @@ class StubLLM:
         self.calls += 1
         if self.fail:
             raise LLMUnavailable("stub is unavailable")
+        text = self.text
+        if self.retry_text is not None and self.calls > 1:
+            text = self.retry_text
         return GenerationResult(
-            text=self.text,
+            text=text,
             model="stub",
             finish_reason="length" if self.truncated else "stop",
         )
@@ -305,6 +311,38 @@ class TestAnswering:
         assert "keine gesicherten Angaben" not in payload["text"]
         assert payload["citations"], "the retrieved pages are offered as links"
         assert payload["citations"][0]["url"].startswith("https://www.zug.ch/")
+        assert client.stub.calls == 2, "the model gets one corrective retry first"
+
+    def test_an_uncited_answer_is_retried_and_the_cited_retry_is_shown(self, client) -> None:  # type: ignore[no-untyped-def]
+        """One corrective turn recovers most answers a small model fails to
+        cite, so a resident sees the answer instead of the fallback."""
+        client.stub.text = "Die Anmeldung kostet zwanzig Franken."
+        client.stub.retry_text = "Die Anmeldung kostet CHF 20.-- pro Person [1]."
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert not payload["is_refusal"]
+        assert "CHF 20.--" in payload["text"]
+        assert payload["citations"]
+        assert client.stub.calls == 2
+
+    def test_a_no_answer_reply_becomes_the_fixed_refusal_with_sources(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The model declaring the evidence insufficient must never reach the
+        person as model-written prose. The fixed refusal is shown, with the
+        retrieved pages attached, and no retry is spent on it."""
+        client.stub.text = "NO_ANSWER"
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert payload["is_refusal"]
+        assert "NO_ANSWER" not in payload["text"]
+        assert "keine gesicherten Angaben" in payload["text"]
+        assert payload["citations"], "the retrieved pages still arrive as links"
+        assert client.stub.calls == 1
 
     def test_markdown_markers_are_stripped_from_the_answer(self, client) -> None:  # type: ignore[no-untyped-def]
         """The interface renders plain text, so **bold** would reach a
@@ -674,3 +712,29 @@ class TestStreaming:
         events = read_sse(client, "Was kostet die Anmeldung?")
         payload = events[-1]["payload"]
         assert payload["text"] == "Die Anmeldung kostet CHF 20 [1]."
+
+    def test_a_no_answer_stream_shows_no_deltas(self, client) -> None:  # type: ignore[no-untyped-def]
+        """Streaming the word NO_ANSWER to the screen and then swapping it
+        for the refusal would read as a malfunction, so the sentinel is
+        suppressed and only the final event arrives."""
+        client.stub.text = "NO_ANSWER"
+        events = read_sse(client, "Was kostet die Anmeldung?")
+        assert [event["type"] for event in events] == ["final"]
+        payload = events[0]["payload"]
+        assert payload["is_refusal"]
+        assert "NO_ANSWER" not in payload["text"]
+        assert payload["citations"]
+
+    def test_an_uncited_stream_is_retried_before_the_final_event(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The uncited first attempt streams, the corrective retry is
+        generated whole, and the final event carries the cited answer."""
+        client.stub.text = "Die Anmeldung kostet zwanzig Franken."
+        client.stub.retry_text = "Die Anmeldung kostet CHF 20.-- pro Person [1]."
+        events = read_sse(client, "Was kostet die Anmeldung?")
+
+        assert any(event["type"] == "delta" for event in events)
+        payload = events[-1]["payload"]
+        assert not payload["is_refusal"]
+        assert "CHF 20.--" in payload["text"]
+        assert payload["citations"]
+        assert client.stub.calls == 2

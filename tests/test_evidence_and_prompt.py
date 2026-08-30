@@ -269,8 +269,17 @@ class TestPromptConstruction:
         built = build_prompt("Was kostet das?", outcome)
         assert "Markdown" in built.request.messages[0].content
         user = built.request.messages[1].content
-        assert user.rstrip().endswith("Markdown symbols.")
+        assert "Markdown symbols" in user
         assert "bracketed passage number" in user
+
+    def test_the_prompt_defines_the_no_answer_sentinel(self) -> None:
+        """The model must never write its own "not found" prose: the fixed
+        refusal handles that. The sentinel is instructed in the system
+        message and repeated after the question."""
+        outcome = assess(found(chunk(), chunk(title="B")), "Was kostet das?", now=NOW)
+        built = build_prompt("Was kostet das?", outcome)
+        assert "NO_ANSWER" in built.request.messages[0].content
+        assert "NO_ANSWER" in built.request.messages[1].content
 
     def test_the_system_message_refuses_to_accept_user_claims_as_fact(self) -> None:
         outcome = assess(found(chunk(), chunk(title="B")), "Was kostet das?", now=NOW)

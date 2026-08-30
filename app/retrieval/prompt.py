@@ -72,9 +72,12 @@ evidence says.
 
 WHAT YOU MAY SAY
 
-Answer only from the evidence provided. If the evidence does not support an \
-answer, say so plainly and point the user to the responsible office. Never \
-fill a gap with something plausible.
+Answer only from the evidence provided. If none of the passages contain the \
+information the question asks for, reply with exactly NO_ANSWER and nothing \
+else; the interface then shows the user an honest message together with links \
+to the retrieved pages. Never write your own text explaining that information \
+was not found, never paste a bare link as the answer, and never fill a gap \
+with something plausible.
 
 Do not invent or estimate any requirement, date, deadline, fee, amount, office \
 name, opening hour, form name, or link. Quote deadlines, fees and legal \
@@ -256,7 +259,8 @@ def build_prompt(
         "contains, answer this question:\n\n"
         f"{question}\n\n"
         "Put the bracketed passage number, like [1], after every factual "
-        "statement. Write plain text without any Markdown symbols."
+        "statement. Write plain text without any Markdown symbols. If the "
+        "passages do not answer the question, reply with exactly NO_ANSWER."
     )
 
     request = GenerationRequest(
