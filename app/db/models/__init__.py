@@ -21,6 +21,7 @@ from app.db.models.content import (
 )
 from app.db.models.review import ContradictionFinding, ContradictionKind, ReviewState
 from app.db.models.system import SettingKey, SystemSetting, get_setting, set_setting
+from app.db.models.upload import UploadJob, UploadState
 from app.db.models.user import ROLE_DESCRIPTIONS, Role, RoleName, User, UserRole, UserSession
 
 __all__ = [
@@ -47,6 +48,8 @@ __all__ = [
     "Source",
     "SourceKind",
     "SystemSetting",
+    "UploadJob",
+    "UploadState",
     "User",
     "UserRole",
     "UserSession",
