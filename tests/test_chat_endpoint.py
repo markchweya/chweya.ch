@@ -236,6 +236,32 @@ class TestChatPage:
     def test_a_stop_control_exists(self, client) -> None:  # type: ignore[no-untyped-def]
         assert 'id="stop"' in client.get("/").text
 
+    def test_the_welcome_screen_offers_suggested_questions(self, client) -> None:  # type: ignore[no-untyped-def]
+        """An empty transcript shows the mark, the intro and three real
+        questions. The buttons submit the form themselves, so they work
+        without any script."""
+        html = client.get("/").text
+        assert 'id="hero"' in html
+        assert html.count('class="suggestion"') == 3
+        assert 'form="ask"' in html
+        assert "Umzug" in html
+
+    def test_the_welcome_state_disappears_once_a_question_is_asked(self, client) -> None:  # type: ignore[no-untyped-def]
+        html = client.post(
+            "/ask", data={"question": "Was kostet die Anmeldung?", "lang": "de"}
+        ).text
+        assert 'id="hero"' not in html
+        assert 'class="suggestion"' not in html
+
+    def test_the_mistakes_disclaimer_sits_under_the_composer(self, client) -> None:  # type: ignore[no-untyped-def]
+        """Dumi is a model and models make mistakes. The page says so, in
+        the user's language, with the canton portal to verify against."""
+        html = client.get("/").text
+        assert "Fehler machen" in html
+        assert "zg.ch" in html
+        html_fr = client.get("/", headers={"Accept-Language": "fr"}).text
+        assert "erreurs" in html_fr
+
 
 class TestAnswering:
     def test_a_grounded_question_is_answered_with_citations(self, client) -> None:  # type: ignore[no-untyped-def]

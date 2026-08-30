@@ -105,6 +105,70 @@ body {
   padding: 1rem 1rem 6rem;
 }
 
+/* The welcome state: mark, intro and composer centred in the viewport,
+ * suggestions beneath. It exists only while the transcript is empty. */
+.chat--welcome {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: calc(100dvh - 8rem);
+  padding-bottom: 2rem;
+}
+.chat--welcome .ask { position: static; margin-top: 0; }
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.hero .dumi { --dumi-size: 4.5rem; }
+.hero__intro {
+  max-width: 32rem;
+  margin: 0;
+  font-family: var(--dumi-font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.suggestions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+.suggestion {
+  min-height: 2.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: 14px;
+  background:
+    linear-gradient(rgb(var(--dumi-ice-rgb) / 0.12), transparent 70%)
+    var(--dumi-surface);
+  color: var(--dumi-ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+.suggestion:hover {
+  border-color: var(--dumi-flow);
+  background: var(--dumi-surface);
+}
+
+/* The honest line under the composer. */
+.ask__note {
+  margin: 0.6rem 0 0;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--dumi-ink-soft);
+}
+.ask__note a { color: inherit; }
+
 .transcript { display: flex; flex-direction: column; gap: 1.5rem; }
 
 .msg { display: flex; gap: 0.75rem; }
@@ -308,6 +372,8 @@ body {
   .bar { padding: 0.5rem 0.75rem; }
   .chat { padding: 0.75rem 0.75rem 6rem; }
   .msg--user .msg__text { max-width: 100%; }
+  .suggestions { grid-template-columns: 1fr; }
+  .hero__intro { font-size: 1.15rem; }
 }
 
 /* Motion in this interface is limited to the mark, which respects

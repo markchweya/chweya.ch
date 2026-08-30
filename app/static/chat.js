@@ -26,6 +26,30 @@
 
   var controller = null;
 
+  // The welcome state exists only while the transcript is empty. The first
+  // message removes it and restores the ordinary chat layout.
+  var hero = document.getElementById("hero");
+  var suggestions = document.getElementById("suggestions");
+
+  function leaveWelcome() {
+    if (hero) { hero.remove(); hero = null; }
+    if (suggestions) { suggestions.remove(); suggestions = null; }
+    var main = document.getElementById("main");
+    if (main) main.classList.remove("chat--welcome");
+  }
+
+  if (suggestions) {
+    suggestions.addEventListener("click", function (event) {
+      var button = event.target.closest("button.suggestion");
+      if (!button) return;
+      // Without this the button also submits the form natively; with it the
+      // question goes through the same streamed path as a typed one.
+      event.preventDefault();
+      input.value = button.value;
+      form.requestSubmit();
+    });
+  }
+
   // The same Markdown-marker removal the server applies to the final text,
   // so the provisional streamed text does not show literal asterisks for the
   // minutes a slow model takes. Only markers are removed, never words, and
@@ -170,6 +194,7 @@
 
     event.preventDefault();
     input.value = "";
+    leaveWelcome();
     addUserMessage(question);
     var shell = addAnswerShell();
     stopButton.hidden = false;

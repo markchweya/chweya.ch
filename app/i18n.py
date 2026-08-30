@@ -401,6 +401,54 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Langue",
         "it": "Lingua",
     },
+    "chat.intro": {
+        "de": (
+            "Ich heisse Dumi. Ich beantworte Fragen zu den öffentlichen "
+            "Informationen des Kantons Zug."
+        ),
+        "en": (
+            "My name is Dumi. I answer questions about the public "
+            "information of the Canton of Zug."
+        ),
+        "fr": (
+            "Je m'appelle Dumi. Je réponds aux questions sur les "
+            "informations publiques du canton de Zoug."
+        ),
+        "it": (
+            "Mi chiamo Dumi. Rispondo a domande sulle informazioni "
+            "pubbliche del Cantone di Zugo."
+        ),
+    },
+    "chat.suggestions": {
+        "de": "Beispielfragen",
+        "en": "Example questions",
+        "fr": "Exemples de questions",
+        "it": "Esempi di domande",
+    },
+    "chat.suggestion_moving": {
+        "de": "Wie melde ich meinen Umzug an?",
+        "en": "How do I register a change of address?",
+        "fr": "Comment annoncer mon déménagement ?",
+        "it": "Come annuncio il mio trasloco?",
+    },
+    "chat.suggestion_tax": {
+        "de": "Wie reiche ich meine Steuererklärung ein?",
+        "en": "How do I file my tax return?",
+        "fr": "Comment remettre ma déclaration d'impôts ?",
+        "it": "Come consegno la dichiarazione d'imposta?",
+    },
+    "chat.suggestion_id": {
+        "de": "Wo erneuere ich Pass oder Identitätskarte?",
+        "en": "Where do I renew my passport or identity card?",
+        "fr": "Où renouveler mon passeport ou ma carte d'identité ?",
+        "it": "Dove rinnovo il passaporto o la carta d'identità?",
+    },
+    "chat.disclaimer": {
+        "de": "Dumi kann Fehler machen. Bitte prüfen Sie wichtige Angaben auf",
+        "en": "Dumi can make mistakes. Please verify important information on",
+        "fr": "Dumi peut faire des erreurs. Veuillez vérifier les informations importantes sur",
+        "it": "Dumi può commettere errori. Verifichi le informazioni importanti su",
+    },
     "error.too_many_requests": {
         "de": "Zu viele Anfragen. Bitte warten Sie einen Moment.",
         "en": "Too many requests. Please wait a moment.",

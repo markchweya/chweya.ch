@@ -25,8 +25,20 @@
    owner's direction (see docs/known-limitations.md). The disclosure text
    remains in the string table and in the page footer of the docs; nothing
    else in the product claims official status. #}
-<main id="main" class="chat">
+<main id="main" class="chat{% if not messages %} chat--welcome{% endif %}">
   <h1 class="visually-hidden">Dumi</h1>
+
+  {# The welcome state: the mark, one honest sentence about what this is,
+     and the composer in the middle of the page. It exists only while the
+     transcript is empty; the first message collapses it to the ordinary
+     chat layout. Rendered server-side too, so the page reads the same
+     without JavaScript. #}
+  {% if not messages %}
+    <div class="hero" id="hero">
+      {% include "_mark.html" %}
+      <p class="hero__intro">{{ t('chat.intro') }}</p>
+    </div>
+  {% endif %}
 
   {# The transcript is a live region so a streamed answer is announced.
      aria-live="polite" waits for a pause rather than interrupting, and
@@ -53,12 +65,15 @@
        one line. The border sits on this box rather than the input, so the
        whole control shows focus. #}
     <div class="ask__box">
+      {# Not marked required: the suggestion buttons submit the form with
+         their own question value while the field is empty, and required
+         would block that without JavaScript. An empty submit gets the
+         polite fixed reply from the server. #}
       <input id="question"
              name="question"
              type="text"
              autocomplete="off"
              maxlength="1000"
-             required
              placeholder="{{ t('chat.placeholder') }}">
       {# Icon buttons. The accessible name is real text, visually hidden; an
          aria-label alone would leave nothing for a translation audit to see.
@@ -80,7 +95,31 @@
         </svg>
       </button>
     </div>
+    {# One honest sentence, always under the composer. Dumi is a model and
+       models make mistakes; the canton's own portal is where important
+       details get verified. #}
+    <p class="ask__note">
+      {{ t('chat.disclaimer') }}
+      <a href="https://www.zg.ch" rel="noopener noreferrer" target="_blank">zg.ch</a>.
+    </p>
   </form>
+
+  {% if not messages %}
+    {# Three questions residents actually ask, as real submit buttons: each
+       carries its text as the question value, so they work without any
+       script. The group disappears with the welcome state. #}
+    <nav class="suggestions" id="suggestions" aria-label="{{ t('chat.suggestions') }}">
+      <button class="suggestion" form="ask" name="question" value="{{ t('chat.suggestion_moving') }}">
+        {{ t('chat.suggestion_moving') }}
+      </button>
+      <button class="suggestion" form="ask" name="question" value="{{ t('chat.suggestion_tax') }}">
+        {{ t('chat.suggestion_tax') }}
+      </button>
+      <button class="suggestion" form="ask" name="question" value="{{ t('chat.suggestion_id') }}">
+        {{ t('chat.suggestion_id') }}
+      </button>
+    </nav>
+  {% endif %}
 
   {# Status for assistive technology. The Dumi mark carries the same state
      visually; this carries it for anyone not looking at the mark. #}
