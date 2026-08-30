@@ -383,11 +383,14 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Envoyer",
         "it": "Invia",
     },
+    # Careful with wording here: this sentence is rendered on the public
+    # page, and the page must not carry the word "official" anywhere. The
+    # sources are the canton's pages; saying so names them without it.
     "chat.thinking": {
-        "de": "Dumi sucht in den offiziellen Seiten",
-        "en": "Dumi is searching the official pages",
-        "fr": "Dumi cherche dans les pages officielles",
-        "it": "Dumi sta cercando nelle pagine ufficiali",
+        "de": "Dumi durchsucht die Seiten des Kantons",
+        "en": "Dumi is searching the canton's pages",
+        "fr": "Dumi cherche dans les pages du canton",
+        "it": "Dumi sta cercando nelle pagine del cantone",
     },
     "chat.stop": {
         "de": "Antwort stoppen",
