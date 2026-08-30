@@ -120,13 +120,33 @@ class TestEvaluate:
             "/login",
             "/admin/settings",
             "/intern/notizen",
+            # CMS view endpoints seen on zg.ch, which duplicate pages the
+            # crawler already has and burn page budget for nothing.
+            "/behoerden/baudirektion/@@megaphone_news",
+            "/behoerden/thema/@@book_reader_view",
+            "/behoerden/thema/feedback_view",
+            "/behoerden/adresse/addressblock_detail_view",
+            "/behoerden/thema/export_pdf",
+            "/de/aforms-formular/libraryId/SKA/formId/KONTAKT",
         ],
     )
     def test_excluded_paths_are_refused(self, path: str) -> None:
-        """Search pages, calendars and authenticated areas are out of scope."""
+        """Search pages, calendars, authenticated areas and CMS view
+        endpoints are out of scope."""
         decision = evaluate(f"https://www.zug.ch{path}", ZUG)
         assert not decision.allowed
         assert decision.reason == "excluded_path"
+
+    def test_content_pages_near_the_view_patterns_stay_allowed(self) -> None:
+        """The view filter must not swallow real pages: an ordinary section
+        page, a page whose name merely contains "view", and a PDF that is
+        not the export endpoint all stay crawlable."""
+        for path in (
+            "/behoerden/baudirektion/direktionssekretariat/einleitung",
+            "/themen/interview-mit-der-vorsteherin",
+            "/dokumente/ferienkalender.pdf",
+        ):
+            assert evaluate(f"https://www.zug.ch{path}", ZUG).allowed, path
 
     def test_deep_paths_are_refused(self) -> None:
         deep = "https://www.zug.ch/" + "/".join(str(i) for i in range(40))

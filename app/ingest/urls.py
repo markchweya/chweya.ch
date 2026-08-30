@@ -60,6 +60,15 @@ EXCLUDED_PATH_PATTERNS = (
     re.compile(r"/(login|logout|admin|intern|internal|myaccount|konto)" + SEGMENT_END, re.IGNORECASE),
     # Print and share endpoints, which duplicate a page we already have.
     re.compile(r"[?&](print|share)=", re.IGNORECASE),
+    # Content-management view endpoints. "@@" is the CMS view namespace on
+    # zg.ch, and the *_view and export_pdf paths serve the page we already
+    # crawled again, as a widget or a generated download. Each one fetched
+    # spends page budget on a duplicate.
+    re.compile(r"@@"),
+    re.compile(r"/[\w-]*_view" + SEGMENT_END, re.IGNORECASE),
+    re.compile(r"/export_pdf" + SEGMENT_END, re.IGNORECASE),
+    # Interactive form endpoints, which are applications, not content.
+    re.compile(r"/aforms-formular" + SEGMENT_END, re.IGNORECASE),
 )
 
 # Query parameters that create an unbounded space of near-identical pages.
