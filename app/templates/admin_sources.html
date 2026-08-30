@@ -1,3 +1,8 @@
+{# Sources: what the crawler may fetch, and the button that makes it fetch.
+
+   The run state is a word, never a colour. The crawl runs in the background;
+   reloading this page is how progress is read, which is stated on the page
+   rather than left for the administrator to discover. #}
 {% extends "base.html" %}
 {% block title %}Sources · Dumi{% endblock %}
 {% block body %}
@@ -11,29 +16,100 @@
 
 <main id="main" class="admin">
   <h1>Sources</h1>
+
+  {% if message %}
+    <p class="auth__error" role="status">{{ message }}</p>
+  {% endif %}
+  {% if problems %}
+    <div role="alert">
+      {% for problem in problems %}
+        <p class="auth__error">{{ problem }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
   {% if sources %}
     <table class="grid">
       <caption class="visually-hidden">Configured crawl sources</caption>
       <thead>
         <tr><th scope="col">Name</th><th scope="col">Base URL</th>
-            <th scope="col">Language</th><th scope="col">State</th>
-            <th scope="col">Last succeeded</th></tr>
+            <th scope="col">Language</th><th scope="col">Last run</th>
+            <th scope="col">Action</th></tr>
       </thead>
       <tbody>
         {% for source in sources %}
+          {% set run = latest_runs.get(source.id) %}
           <tr>
             <th scope="row">{{ source.name }}</th>
             <td>{{ source.base_url }}</td>
             <td>{{ source.default_language | upper }}</td>
             {# State is a word, not only a colour. #}
-            <td>{{ 'Paused' if source.is_paused else 'Active' }}</td>
-            <td>{{ source.last_crawl_succeeded_at.strftime('%d.%m.%Y %H:%M') if source.last_crawl_succeeded_at else 'never' }}</td>
+            <td>
+              {% if run %}
+                {{ run.state }}
+                {% if run.started_at %} · {{ run.started_at.strftime('%d.%m.%Y %H:%M') }}{% endif %}
+                {% if run.state == 'completed' %}
+                  · {{ run.urls_fetched }} fetched, {{ run.versions_created }} new versions
+                {% endif %}
+              {% elif source.is_paused %}
+                paused
+              {% else %}
+                never crawled
+              {% endif %}
+            </td>
+            <td>
+              {% if run and run.state in ('queued', 'running') %}
+                running — reload this page for progress
+              {% else %}
+                <form method="post" action="/admin/sources/{{ source.id }}/crawl">
+                  <button type="submit" class="send">Crawl now</button>
+                </form>
+              {% endif %}
+            </td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   {% else %}
-    <p>No sources configured.</p>
+    <p>No sources configured. Add one below to give the crawler somewhere to go.</p>
   {% endif %}
+
+  <section aria-labelledby="new-source">
+    <h2 id="new-source">Add a source</h2>
+    <p>
+      A source is one area of an allowed site. The crawler reads its sitemap
+      and follows links one level within the base path, respecting robots.txt
+      and pausing at least a second between requests. Only these hosts are
+      permitted: {% for host in allowed_hosts %}{{ host }}{% if not loop.last %}, {% endif %}{% endfor %}.
+      A crawl of a large area takes a while; start with a specific section
+      such as https://www.zug.ch/behoerden rather than the whole site.
+    </p>
+    <form class="auth__form" method="post" action="/admin/sources">
+      <label for="src-name">Name</label>
+      <input type="text" id="src-name" name="name" required maxlength="200"
+             placeholder="Behörden">
+
+      <label for="src-url">Base URL</label>
+      <input type="url" id="src-url" name="base_url" required maxlength="2048"
+             placeholder="https://www.zug.ch/behoerden">
+
+      <label for="src-lang">Primary language</label>
+      <select id="src-lang" name="default_language">
+        <option value="de" selected>DE</option>
+        <option value="en">EN</option>
+        <option value="fr">FR</option>
+        <option value="it">IT</option>
+      </select>
+
+      <label for="src-dept">Responsible office (optional)</label>
+      <input type="text" id="src-dept" name="department" maxlength="200">
+
+      <label for="src-excluded">Excluded path prefixes, one per line (optional)</label>
+      <textarea id="src-excluded" name="excluded_paths" rows="3"
+                placeholder="/behoerden/archiv"></textarea>
+
+      <button type="submit" class="send">Add source</button>
+    </form>
+  </section>
 </main>
 {% endblock %}

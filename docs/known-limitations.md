@@ -27,7 +27,12 @@ against nothing.
 ## Not implemented
 
 ### Ingestion
-- Scheduled synchronisation. Crawls are manual.
+- Scheduled synchronisation. Crawls are started by hand from the sources
+  page.
+- The crawl runs inside the web process. A server restart kills it mid-run;
+  startup marks the orphaned run as failed so the source is not blocked. The
+  compose worker service exists for moving this out of the web process, and
+  is not wired up.
 - Multi-level link following. One level within a source's base path.
 - OCR. Scanned PDFs are detected and flagged, never read.
 - Concurrency. URLs are crawled one at a time; `CRAWLER_MAX_CONCURRENCY` is

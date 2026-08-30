@@ -52,6 +52,20 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             note="Development configuration. Not Swiss-hosted and not for public use.",
         )
 
+    # Crawls run in this process, so a restart kills them mid-run. Repair any
+    # row a dead process left claiming RUNNING, or it would block its source
+    # forever. Best-effort: an unreachable database must not stop the process
+    # from starting, because /readyz is how that condition gets reported.
+    try:
+        from app.db.session import get_session_factory
+        from app.ingest.runner import fail_orphaned_runs
+
+        with get_session_factory()() as db:
+            fail_orphaned_runs(db)
+            db.commit()
+    except Exception as exc:  # noqa: BLE001 - startup must survive a down database
+        logger.warning("crawl.orphan_cleanup_skipped", error=type(exc).__name__)
+
     yield
 
     logger.info("application.stopping")

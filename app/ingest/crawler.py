@@ -438,8 +438,22 @@ class Crawler:
 
     # ---------------------------------------------------------------- run
 
-    async def run(self, source: Source, *, triggered_by_id=None, scheduled: bool = False) -> CrawlRun:
-        """Crawl one source and return the completed run record."""
+    async def run(
+        self,
+        source: Source,
+        *,
+        triggered_by_id=None,
+        scheduled: bool = False,
+        commit_start: bool = False,
+    ) -> CrawlRun:
+        """Crawl one source and return the completed run record.
+
+        ``commit_start`` commits the RUNNING row before crawling begins. The
+        background runner needs that: without it, no other session can see
+        that a crawl is underway, so the sources page shows nothing and a
+        second process could start a duplicate run. Callers that manage
+        their own transaction leave it off.
+        """
         run = CrawlRun(
             source_id=source.id,
             state=CrawlRunState.RUNNING.value,
@@ -458,6 +472,8 @@ class Crawler:
             object_id=str(source.id),
             detail={"source_name": source.name, "scheduled": scheduled},
         )
+        if commit_start:
+            self._session.commit()
 
         outcome = CrawlOutcome()
         source.last_crawl_started_at = _utcnow()

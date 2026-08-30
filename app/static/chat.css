@@ -463,3 +463,14 @@ body {
   height: 1.1rem;
   accent-color: var(--dumi-flow);
 }
+
+/* Textareas match the text inputs beside them. */
+.auth__form textarea {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: var(--radius);
+  background: var(--dumi-surface);
+  color: var(--dumi-ink);
+  font: inherit;
+  resize: vertical;
+}

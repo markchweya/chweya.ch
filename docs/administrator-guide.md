@@ -45,7 +45,21 @@ A source is an area of a site the crawler may fetch. Adding one widens what
 the system will fetch, so it is a policy decision and it is audited.
 
 Before adding: the host must be on the allowlist, the content must be public,
-and robots.txt must permit it. See `docs/source-policy.md`.
+and robots.txt must permit it. See `docs/source-policy.md`. The form checks
+the allowlist server-side; it can narrow what is crawled, never widen it
+beyond what the deployment permits.
+
+`/admin/sources` has the form and, per source, a "Crawl now" button. The
+crawl runs in the background: the button returns immediately and the run's
+state sits in the Last run column, so reloading the page is how progress is
+read. One crawl per source at a time; a second click is refused while one is
+running. Start with a specific section such as `/behoerden` rather than the
+whole site, because the crawler pauses at least a second between requests
+and a large area takes accordingly long.
+
+Crawled pages are indexed for keyword search as soon as the run finishes,
+and embedded for semantic search right after, when an embedding model is
+available.
 
 After a crawl, read what came back before trusting it. The first crawl of a
 real site always surfaces boilerplate the filters have not seen.

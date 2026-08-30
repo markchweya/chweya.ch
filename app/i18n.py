@@ -620,6 +620,79 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Veuillez indiquer un motif.",
         "it": "Indicare un motivo.",
     },
+    # --- sources and crawling ----------------------------------------------
+    "source.created": {
+        "de": "Die Quelle wurde angelegt. Sie können sie jetzt crawlen.",
+        "en": "The source was created. You can crawl it now.",
+        "fr": "La source a été créée. Vous pouvez la parcourir maintenant.",
+        "it": "La fonte è stata creata. Ora può avviare la scansione.",
+    },
+    "source.name_required": {
+        "de": "Bitte geben Sie einen Namen an.",
+        "en": "Please enter a name.",
+        "fr": "Veuillez saisir un nom.",
+        "it": "Inserire un nome.",
+    },
+    "source.invalid_url": {
+        "de": "Die Adresse ist ungültig. Sie muss mit https:// beginnen.",
+        "en": "The address is not valid. It must start with https://.",
+        "fr": "L'adresse n'est pas valide. Elle doit commencer par https://.",
+        "it": "L'indirizzo non è valido. Deve iniziare con https://.",
+    },
+    "source.host_not_allowed": {
+        "de": (
+            "Dieser Host steht nicht auf der Liste der erlaubten Websites. "
+            "Die Liste wird in der Konfiguration festgelegt, nicht hier."
+        ),
+        "en": (
+            "This host is not on the list of allowed sites. The list is set "
+            "in the configuration, not here."
+        ),
+        "fr": (
+            "Cet hôte ne figure pas dans la liste des sites autorisés. La "
+            "liste est définie dans la configuration, pas ici."
+        ),
+        "it": (
+            "Questo host non è nell'elenco dei siti consentiti. L'elenco è "
+            "definito nella configurazione, non qui."
+        ),
+    },
+    "source.duplicate": {
+        "de": "Eine Quelle mit dieser Adresse existiert bereits.",
+        "en": "A source with this address already exists.",
+        "fr": "Une source avec cette adresse existe déjà.",
+        "it": "Una fonte con questo indirizzo esiste già.",
+    },
+    "crawl.started": {
+        "de": (
+            "Der Crawl läuft im Hintergrund. Laden Sie diese Seite neu, um "
+            "den Fortschritt zu sehen."
+        ),
+        "en": (
+            "The crawl is running in the background. Reload this page to see "
+            "its progress."
+        ),
+        "fr": (
+            "L'exploration s'exécute en arrière-plan. Rechargez cette page "
+            "pour suivre la progression."
+        ),
+        "it": (
+            "La scansione è in corso in background. Ricaricare questa pagina "
+            "per vedere i progressi."
+        ),
+    },
+    "crawl.already_running": {
+        "de": "Für diese Quelle läuft bereits ein Crawl.",
+        "en": "A crawl is already running for this source.",
+        "fr": "Une exploration est déjà en cours pour cette source.",
+        "it": "Una scansione è già in corso per questa fonte.",
+    },
+    "crawl.source_paused": {
+        "de": "Diese Quelle ist pausiert und wird nicht gecrawlt.",
+        "en": "This source is paused and will not be crawled.",
+        "fr": "Cette source est en pause et ne sera pas explorée.",
+        "it": "Questa fonte è in pausa e non verrà scansionata.",
+    },
     # --- contradiction review ----------------------------------------------
     "review.unknown_outcome": {
         "de": "Diese Entscheidung gibt es nicht.",

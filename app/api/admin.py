@@ -11,9 +11,10 @@ usable exactly once.
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, Form, Request, Response
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
@@ -301,12 +302,151 @@ def sources_page(
     request: Request,
     db: Session = Depends(db_session),
     who: CurrentUser = Depends(require(Permission.MANAGE_SOURCES)),
+    message: str = "",
+    problems: str = "",
 ) -> HTMLResponse:
-    """List configured sources. Requires the source management permission."""
+    """List configured sources with their latest runs, and the form to add one."""
+    from app.i18n import STRINGS
+
     language = _language(request)
     sources = list(db.execute(select(Source).order_by(Source.name)).scalars())
+
+    # The most recent run per source, whatever its state. Few sources exist,
+    # so one query per row costs nothing and stays readable.
+    latest_runs = {
+        source.id: db.execute(
+            select(CrawlRun)
+            .where(CrawlRun.source_id == source.id)
+            .order_by(CrawlRun.started_at.desc().nullslast())
+            .limit(1)
+        ).scalar_one_or_none()
+        for source in sources
+    }
+
+    # Message keys resolve against the string table only, so nothing from the
+    # query string is ever rendered.
+    shown_problems = [
+        t(key, language) for key in problems.split(",")[:10] if key in STRINGS
+    ]
+
     return templates.TemplateResponse(
         request=request,
         name="admin_sources.html",
-        context=_context(request, language, who=who, sources=sources),
+        context=_context(
+            request,
+            language,
+            who=who,
+            sources=sources,
+            latest_runs=latest_runs,
+            allowed_hosts=get_settings().allowed_hosts,
+            message=t(message, language) if message and message in STRINGS else "",
+            problems=shown_problems,
+        ),
     )
+
+
+@router.post("/sources")
+def create_source(
+    request: Request,
+    db: Session = Depends(db_session),
+    who: CurrentUser = Depends(require(Permission.MANAGE_SOURCES)),
+    name: str = Form(""),
+    base_url: str = Form(""),
+    default_language: str = Form("de"),
+    department: str = Form(""),
+    excluded_paths: str = Form(""),
+) -> RedirectResponse:
+    """Add a crawlable area of an allowed site.
+
+    A source is a policy decision: adding one widens what the crawler will
+    fetch. The hostname must already be on the configured allowlist, which
+    only the operator can change, so this form can narrow the crawl but
+    never widen it beyond what the deployment permits.
+    """
+    from urllib.parse import urlsplit
+
+    from app.ingest.urls import host_matches_allowlist, normalise
+
+    settings = get_settings()
+    problems: list[str] = []
+
+    name = name.strip()
+    if len(name) < 2:
+        problems.append("source.name_required")
+
+    cleaned_url = ""
+    try:
+        cleaned_url = normalise(base_url.strip())
+        parts = urlsplit(cleaned_url)
+        if parts.scheme != "https" or not parts.hostname:
+            problems.append("source.invalid_url")
+        elif not host_matches_allowlist(parts.hostname, settings.allowed_hosts):
+            problems.append("source.host_not_allowed")
+    except (ValueError, AttributeError):
+        problems.append("source.invalid_url")
+
+    if default_language not in ("de", "en", "fr", "it"):
+        default_language = "de"
+
+    if not problems:
+        duplicate = db.execute(
+            select(Source).where(Source.base_url == cleaned_url)
+        ).scalar_one_or_none()
+        if duplicate is not None:
+            problems.append("source.duplicate")
+
+    if problems:
+        return RedirectResponse(
+            "/admin/sources?problems=" + ",".join(problems), status_code=303
+        )
+
+    source = Source(
+        name=name,
+        base_url=cleaned_url,
+        default_language=default_language,
+        department=department.strip() or None,
+        excluded_paths=excluded_paths.strip(),
+        created_by_id=who.user.id,
+    )
+    db.add(source)
+    db.flush()
+
+    record(
+        db,
+        action=AuditAction.SOURCE_CREATED,
+        actor_user_id=who.user.id,
+        actor_label=f"user:{who.user.id}",
+        object_type="source",
+        object_id=str(source.id),
+        detail={"name": name, "base_url": cleaned_url},
+    )
+    db.commit()
+    logger.info("source.created", base_url=cleaned_url)
+    return RedirectResponse("/admin/sources?message=source.created", status_code=303)
+
+
+@router.post("/sources/{source_id}/crawl")
+async def crawl_source(
+    source_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(db_session),
+    who: CurrentUser = Depends(require(Permission.MANAGE_SOURCES)),
+) -> RedirectResponse:
+    """Start a crawl of one source in the background.
+
+    Async on purpose: the crawl task must land on the server's event loop to
+    outlive this request. The button returns immediately; the run record on
+    the sources page is the progress report.
+    """
+    from app.ingest import runner
+
+    source = db.get(Source, source_id)
+    if source is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="source_not_found")
+
+    problems = runner.start_crawl(db, source, triggered_by_id=who.user.id)
+    if problems:
+        return RedirectResponse(
+            "/admin/sources?problems=" + ",".join(problems), status_code=303
+        )
+    return RedirectResponse("/admin/sources?message=crawl.started", status_code=303)
