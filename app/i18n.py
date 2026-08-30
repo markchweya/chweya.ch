@@ -146,6 +146,38 @@ STRINGS: dict[str, dict[str, str]] = {
             "Sostegno: 143 (Telefono Amico), 147 (per bambini e giovani)."
         ),
     },
+    # Social replies. Fixed strings, never model output: a greeting carries
+    # no factual claim, so it needs no evidence, but letting the model chat
+    # freely would reopen the door the fail-closed design keeps shut.
+    "answer.greeting": {
+        "de": (
+            "Hallo! Ich bin Dumi und beantworte Fragen zu den Dienstleistungen "
+            "des Kantons Zug: Adresse anmelden, Ausweis beantragen, Steuern, "
+            "Abfall und mehr. Was möchten Sie wissen?"
+        ),
+        "en": (
+            "Hello! I am Dumi and I answer questions about Canton of Zug "
+            "services: registering an address, applying for an ID, taxes, "
+            "waste disposal and more. What would you like to know?"
+        ),
+        "fr": (
+            "Bonjour ! Je suis Dumi et je réponds aux questions sur les "
+            "prestations du canton de Zoug : annoncer son arrivée, demander "
+            "une carte d'identité, les impôts, les déchets et plus encore. "
+            "Que souhaitez-vous savoir ?"
+        ),
+        "it": (
+            "Salve! Sono Dumi e rispondo a domande sui servizi del Canton "
+            "Zugo: notifica del domicilio, richiesta della carta d'identità, "
+            "imposte, rifiuti e altro. Cosa desidera sapere?"
+        ),
+    },
+    "answer.thanks": {
+        "de": "Gern geschehen. Wenn Sie noch eine Frage haben, bin ich hier.",
+        "en": "You are welcome. If you have another question, I am here.",
+        "fr": "Avec plaisir. Si vous avez une autre question, je suis là.",
+        "it": "Prego. Se ha un'altra domanda, sono qui.",
+    },
     "answer.sources_inconsistent": {
         "de": (
             "Die offiziellen Quellen zu dieser Frage scheinen sich zu "

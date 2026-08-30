@@ -90,6 +90,48 @@ class Answer:
         return bool(self.citations)
 
 
+# Messages that are social, not factual. A greeting needs no evidence and
+# answering it through document retrieval produces a refusal that reads
+# broken. The whole message must match: "hey, what does a passport cost"
+# carries a question and goes to retrieval like any other.
+#
+# The replies are fixed interface strings, never model output. Letting the
+# model chat freely here would reopen exactly the door the fail-closed
+# design exists to keep shut.
+_GREETING_PATTERN = re.compile(
+    r"^(?:"
+    r"hi+|hey+|hello+|hallo+|hoi|hey there|good (?:morning|afternoon|evening)|"
+    r"sal(?:ü|u|i)|servus|moin|gr(?:ü|ue)ezi(?: mitenand)?|"
+    r"guten (?:tag|morgen|abend)|"
+    r"bonjour|bonsoir|salut|coucou|"
+    r"buongiorno|buonasera|buondì|buondi|ciao"
+    r")(?:[\s,]+dumi)?$"
+)
+_THANKS_PATTERN = re.compile(
+    r"^(?:"
+    r"thanks+|thank you(?: very much)?|thx|"
+    r"danke(?:sch(?:ö|oe)n| vielmal|)|vielen dank|merci(?: beaucoup| vilmal|)|"
+    r"grazie(?: mille|)"
+    r")(?:[\s,]+dumi)?$"
+)
+
+
+def small_talk_key(question: str) -> str | None:
+    """Return the message key for a purely social message, or None.
+
+    Deliberately narrow: only a message that is nothing but a greeting or a
+    thank-you qualifies. Anything carrying content words is a question and
+    must face the evidence requirement.
+    """
+    bare = re.sub(r"[!?.…🙂😊👋🙏]+", " ", question.lower()).strip()
+    bare = re.sub(r"\s+", " ", bare)
+    if _GREETING_PATTERN.fullmatch(bare):
+        return "answer.greeting"
+    if _THANKS_PATTERN.fullmatch(bare):
+        return "answer.thanks"
+    return None
+
+
 def detect_language(question: str, fallback: str = DEFAULT_LANGUAGE) -> str:
     """Guess the language of a question.
 
@@ -215,6 +257,18 @@ async def answer_question(
             language=answer_language,
             confidence=Confidence.INSUFFICIENT,
             is_refusal=True,
+        )
+
+    # A greeting or a thank-you gets a greeting back, before retrieval runs.
+    # There is no factual claim in "hello", so the evidence requirement does
+    # not apply, and refusing it for lack of sources reads as a malfunction.
+    # The reply is a fixed localised string; the model is not consulted.
+    social = small_talk_key(question)
+    if social is not None:
+        return Answer(
+            text=t(social, answer_language),
+            language=answer_language,
+            confidence=Confidence.HIGH,
         )
 
     result = search(session, embedder, question)

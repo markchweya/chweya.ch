@@ -485,3 +485,44 @@ class TestProviderCache:
 
         recovered = chat.get_embedding_provider()
         assert isinstance(recovered, HashingProvider)
+
+
+class TestSmallTalk:
+    """A greeting carries no factual claim, so it gets a greeting back."""
+
+    def test_a_greeting_is_answered_without_evidence_or_the_model(self, client) -> None:  # type: ignore[no-untyped-def]
+        payload = client.post(
+            "/ask", json={"question": "heyyy", "lang": "en"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert not payload["is_refusal"]
+        assert "Dumi" in payload["text"]
+        assert payload["citations"] == []
+        # The model is never consulted for social replies.
+        assert client.stub.calls == 0
+
+    def test_the_greeting_answers_in_the_selected_language(self, client) -> None:  # type: ignore[no-untyped-def]
+        payload = client.post(
+            "/ask", json={"question": "hallo", "lang": "fr"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert "Zoug" in payload["text"]
+
+    def test_thanks_gets_a_reply(self, client) -> None:  # type: ignore[no-untyped-def]
+        payload = client.post(
+            "/ask", json={"question": "merci beaucoup", "lang": "fr"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert not payload["is_refusal"]
+        assert client.stub.calls == 0
+
+    def test_a_greeting_with_a_question_attached_is_a_question(self, client) -> None:  # type: ignore[no-untyped-def]
+        """"hey, what does the registration cost" must face the evidence
+        requirement like any other question."""
+        payload = client.post(
+            "/ask",
+            json={"question": "hey, was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert "CHF 20" in payload["text"]
+        assert client.stub.calls == 1
