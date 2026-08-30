@@ -65,16 +65,25 @@ deliberate.
 
 ## Contradictions
 
-The queue lists suspected inconsistencies, highest priority first. Deadlines
-outrank fees because missing a deadline has consequences a resident cannot
-undo.
+`/admin/review` lists suspected inconsistencies, highest priority first.
+Deadlines outrank fees because missing a deadline has consequences a resident
+cannot undo. Open a finding to see both passages in full, with their
+documents, dates and the values the detector compared.
 
 You are not being asked which page is prettier. You are being asked which one
 is currently correct, and **"not a contradiction" is a legitimate and common
 answer** when two different services simply charge different amounts.
 
 If you cannot tell, mark it unresolved. Answers touching it will then say the
-official sources appear inconsistent, which is true and useful.
+official sources appear inconsistent, which is true and useful, and the
+finding stays in the queue for when the canton answers.
+
+Choosing "first is current" or "second is current" takes the version carrying
+the stale passage out of the index, and the form requires a written reason.
+The exclusion heals itself: when the canton fixes the page, the next crawl
+files a new version and approving it is a fresh decision. A decided finding
+stays decided; if the situation changes, run detection again and a new
+finding is filed.
 
 ## Uploading a document
 
@@ -130,8 +139,8 @@ the audit record, including downloading the original.
 
 ## Things you cannot do yet
 
-Resolving contradictions in the interface, managing users, and promoting an
-index version are not implemented. See `docs/known-limitations.md`.
+Managing users and promoting an index version are not implemented. See
+`docs/known-limitations.md`.
 
 ## When something looks wrong
 

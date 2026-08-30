@@ -68,9 +68,35 @@ official sources appear inconsistent.
 
 A passage in a version marked excluded or superseded is not retrievable at all.
 
-## Not implemented
+## The interface
 
-There is no review interface. Detection files findings and the states exist;
-resolving one currently requires SQL. The effect on answer confidence is
-specified above and is **not yet wired into the confidence policy**. Both are
-listed in the known limitations.
+`/admin/review` lists open findings, most urgent first, with the recent
+decisions below them. It requires the contradiction-resolution permission,
+which the reviewer role holds and the auditor deliberately does not.
+
+The detail page shows both passages in full with their documents, versions,
+dates and extracted values. Each resolution option states its consequence on
+the form itself, because a reviewer must know that a choice takes a page out
+of the index before making it.
+
+What each decision does:
+
+* **Not a contradiction** records the judgment and touches no content.
+* **First or second is current** excludes the version carrying the stale
+  passage. The exclusion self-heals: when the canton fixes the page, the next
+  crawl files a new version and its approval is a fresh decision.
+* **Both excluded** takes both versions out of the index.
+* **Unresolved** keeps the finding open, and with it the qualification on
+  every answer touching either passage.
+
+Any decision that removes content requires a written reason. A decided
+finding stays decided; if the situation changes, detection files a new one.
+"Start review" marks a finding as being looked at, advisorily: it tells a
+second reviewer someone is on it, and locks nothing.
+
+Detection can be run from the queue page. Filing findings decides nothing,
+so a reviewer may trigger it, and the run is audited.
+
+The effect on answers is wired in: an answer drawing on a passage party to an
+open, in-review or unresolved finding is capped at low confidence and carries
+the inconsistency notice in the user's language.

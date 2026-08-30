@@ -43,9 +43,6 @@ against nothing.
   referring to a previous answer will not resolve.
 
 ### Administration
-- The contradiction review interface. Detection works; resolving needs SQL.
-- The specified effect of an open contradiction on answer confidence is
-  documented and not wired in.
 - Index versioning, atomic promotion and rollback.
 - User management.
 - Feedback capture.
