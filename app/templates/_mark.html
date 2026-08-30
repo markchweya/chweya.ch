@@ -1,0 +1,13 @@
+{# The Dumi mark. data-state is the only status indicator in the product:
+   there is no spinner and no typing dots anywhere. aria-hidden because the
+   surrounding lockup already carries the name; announcing it again would make
+   a screen reader say "Dumi Dumi". #}
+<span class="dumi" data-state="{{ state | default('idle') }}" aria-hidden="true">
+  <span class="dumi__orb">
+    <i class="dumi__blob dumi__blob--a"></i>
+    <i class="dumi__blob dumi__blob--b"></i>
+    <i class="dumi__blob dumi__blob--c"></i>
+    <i class="dumi__core"></i>
+    <i class="dumi__sheen"></i>
+  </span>
+</span>

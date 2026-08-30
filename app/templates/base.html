@@ -1,0 +1,32 @@
+{# Base layout.
+
+   The document language is set from the negotiated language, which screen
+   readers use to choose a voice. A German page announced with an English
+   voice is close to unusable, and it is a WCAG 3.1.1 failure.
+
+   The Dumi design system is loaded from shared/brand unchanged. Nothing here
+   overrides it. #}
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dumi{% endblock %}</title>
+
+  {# Favicon set, served from the shared brand folder. #}
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/brand/favicon/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/brand/favicon/apple-touch-icon.png">
+  <meta name="theme-color" content="#0B3B57">
+
+  <link rel="stylesheet" href="/brand/dumi-tokens.css">
+  <link rel="stylesheet" href="/brand/dumi-mark.css">
+  <link rel="stylesheet" href="/static/chat.css">
+</head>
+<body>
+  {# Skip link, first in the tab order, visible on focus. #}
+  <a class="skip-link" href="#main">{{ t('chat.skip_to_content') }}</a>
+  {% block body %}{% endblock %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

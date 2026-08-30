@@ -164,6 +164,36 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "dernière vérification",
         "it": "ultima verifica",
     },
+    "chat.skip_to_content": {
+        "de": "Zum Inhalt springen",
+        "en": "Skip to content",
+        "fr": "Aller au contenu",
+        "it": "Vai al contenuto",
+    },
+    "chat.your_question": {
+        "de": "Ihre Frage",
+        "en": "Your question",
+        "fr": "Votre question",
+        "it": "La sua domanda",
+    },
+    "chat.answer_from_dumi": {
+        "de": "Antwort von Dumi",
+        "en": "Answer from Dumi",
+        "fr": "Réponse de Dumi",
+        "it": "Risposta di Dumi",
+    },
+    "chat.opens_new_tab": {
+        "de": "öffnet in neuem Tab",
+        "en": "opens in a new tab",
+        "fr": "ouvre dans un nouvel onglet",
+        "it": "si apre in una nuova scheda",
+    },
+    "chat.transcript": {
+        "de": "Gesprächsverlauf",
+        "en": "Conversation",
+        "fr": "Conversation",
+        "it": "Conversazione",
+    },
     "chat.placeholder": {
         "de": "Stellen Sie eine Frage",
         "en": "Ask a question",

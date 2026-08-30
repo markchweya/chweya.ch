@@ -1,0 +1,51 @@
+{# One turn in the transcript. #}
+{% if message.role == 'user' %}
+  <article class="msg msg--user">
+    <h2 class="visually-hidden">{{ t('chat.your_question') }}</h2>
+    <div class="msg__text">{{ message.text }}</div>
+  </article>
+{% else %}
+  <article class="msg msg--bot" data-confidence="{{ message.confidence }}">
+    <h2 class="visually-hidden">{{ t('chat.answer_from_dumi') }}</h2>
+    {% include "_mark.html" %}
+    <div class="msg__body">
+
+      {% for notice in message.notices %}
+        {# Emergency information first and marked as an alert, because section
+           12 forbids delaying someone in an emergency with procedural text. #}
+        <p class="callout callout--{{ 'emergency' if notice == 'answer.emergency' else 'caution' }}"
+           {% if notice == 'answer.emergency' %}role="alert"{% endif %}>
+          {{ t(notice) }}
+        </p>
+      {% endfor %}
+
+      <div class="msg__text">{{ message.text }}</div>
+
+      {% if message.citations %}
+        <section class="sources" aria-labelledby="src-{{ message_index }}">
+          <h3 id="src-{{ message_index }}" class="sources__title">{{ t('answer.sources') }}</h3>
+          <ol class="sources__list">
+            {% for citation in message.citations %}
+              <li>
+                {% if citation.url %}
+                  <a href="{{ citation.url }}" rel="noopener noreferrer nofollow" target="_blank">
+                    {{ citation.title }}<span class="visually-hidden"> ({{ t('chat.opens_new_tab') }})</span>
+                  </a>
+                {% else %}
+                  {{ citation.title }}
+                {% endif %}
+                {% if citation.locator %}<span class="sources__where">{{ citation.locator }}</span>{% endif %}
+                {% if citation.is_cross_language %}
+                  <span class="sources__lang">{{ t('answer.source_language_note') }} {{ citation.language | upper }}</span>
+                {% endif %}
+                {% if citation.last_checked %}
+                  <span class="sources__date">{{ t('answer.last_checked') }} {{ citation.last_checked.strftime('%d.%m.%Y') }}</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ol>
+        </section>
+      {% endif %}
+    </div>
+  </article>
+{% endif %}

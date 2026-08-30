@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Dumi{% endblock %}
+
+{% block body %}
+<header class="bar">
+  <span class="dumi-lockup">
+    {% include "_mark.html" %}
+    Dumi <span class="dumi-lockup__tag">Prototype</span>
+  </span>
+
+  {# The language selector is a real form, so it works without JavaScript and
+     is operable by keyboard. aria-current marks the active option, so the
+     choice is conveyed by more than colour. #}
+  <nav class="langs" aria-label="{{ t('chat.language') }}">
+    {% for code, label in languages %}
+      <a href="?lang={{ code }}"
+         hreflang="{{ code }}"
+         lang="{{ code }}"
+         {% if code == language %}aria-current="true"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+</header>
+
+{# The prototype notice. Not dismissible, and placed before the transcript so
+   a screen reader reaches it before any answer. role="note" rather than
+   "alert": an alert interrupts, and this is standing context. #}
+<aside class="notice" role="note" aria-labelledby="notice-title">
+  <strong id="notice-title">{{ t('notice.title') }}</strong>
+  <p>{{ t('notice.body') }}</p>
+</aside>
+
+<main id="main" class="chat">
+  <h1 class="visually-hidden">Dumi</h1>
+
+  {# The transcript is a live region so a streamed answer is announced.
+     aria-live="polite" waits for a pause rather than interrupting, and
+     aria-atomic="false" announces only what was added. #}
+  <div id="transcript"
+       class="transcript"
+       role="log"
+       aria-live="polite"
+       aria-atomic="false"
+       aria-relevant="additions text"
+       aria-label="{{ t('chat.transcript') }}">
+    {% for message in messages %}
+      {% set message_index = loop.index0 %}
+      {% include "_message.html" %}
+    {% endfor %}
+  </div>
+
+  <form id="ask" class="ask" method="post" action="/ask">
+    <input type="hidden" name="lang" value="{{ language }}">
+    {# A real label, visually hidden rather than absent. A placeholder is not
+       a label: it disappears on focus and many screen readers skip it. #}
+    <label for="question" class="visually-hidden">{{ t('chat.placeholder') }}</label>
+    <input id="question"
+           name="question"
+           type="text"
+           autocomplete="off"
+           maxlength="1000"
+           required
+           placeholder="{{ t('chat.placeholder') }}"
+           aria-describedby="notice-title">
+    <button type="submit" class="send">{{ t('chat.send') }}</button>
+    {# Hidden until a request is in flight. Section 15 requires a way to stop
+       generated output. #}
+    <button type="button" id="stop" class="stop" hidden>{{ t('chat.stop') }}</button>
+  </form>
+
+  {# Status for assistive technology. The Dumi mark carries the same state
+     visually; this carries it for anyone not looking at the mark. #}
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/chat.js" defer></script>
+{% endblock %}

@@ -1,0 +1,239 @@
+/* Chat interface.
+ *
+ * Builds on shared/brand rather than replacing it: every colour, typeface and
+ * motion value comes from the Dumi tokens. Nothing here overrides the mark.
+ *
+ * Accessibility decisions worth knowing:
+ *  - Sizes are in rem, so the page reflows when a reader enlarges text.
+ *  - Focus is always visible, and never removed without a replacement.
+ *  - Touch targets are at least 44px, which WCAG 2.2 requires.
+ *  - Confidence is shown by a label and a border style, never by colour
+ *    alone.
+ */
+
+:root {
+  --chat-max: 46rem;
+  --radius: 3px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--dumi-ground);
+  color: var(--dumi-ink);
+  font-family: var(--dumi-font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Visible only when focused, and first in the tab order. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  padding: 0.75rem 1rem;
+  background: var(--dumi-surface);
+  color: var(--dumi-ink);
+  z-index: 100;
+}
+.skip-link:focus {
+  left: 0;
+  outline: 3px solid var(--dumi-flow);
+  outline-offset: 2px;
+}
+
+/* Available to assistive technology, absent from the visual layout.
+ * Not display:none, which removes it from the accessibility tree too. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--dumi-flow);
+  outline-offset: 2px;
+}
+
+/* --- header ------------------------------------------------------------- */
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--dumi-line);
+  background: var(--dumi-surface);
+}
+
+.langs { display: flex; gap: 0.25rem; }
+.langs a {
+  /* 44px minimum touch target, WCAG 2.2 Target Size (Minimum). */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border-radius: var(--radius);
+  color: var(--dumi-ink-soft);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+.langs a:hover { text-decoration: underline; }
+/* The current language is marked by weight and an underline as well as
+ * background, so it does not depend on colour perception. */
+.langs a[aria-current="true"] {
+  background: var(--dumi-ground);
+  color: var(--dumi-ink);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* --- prototype notice ---------------------------------------------------- */
+.notice {
+  max-width: var(--chat-max);
+  margin: 1rem auto 0;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--dumi-line);
+  border-left: 4px solid var(--dumi-accent);
+  border-radius: var(--radius);
+  background: var(--dumi-surface);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.notice strong { display: block; margin-bottom: 0.25rem; }
+.notice p { margin: 0; color: var(--dumi-ink-soft); }
+
+/* --- transcript ---------------------------------------------------------- */
+.chat {
+  max-width: var(--chat-max);
+  margin: 0 auto;
+  padding: 1rem 1rem 6rem;
+}
+
+.transcript { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.msg { display: flex; gap: 0.75rem; }
+.msg--user { justify-content: flex-end; }
+.msg--user .msg__text {
+  max-width: 85%;
+  padding: 0.7rem 0.95rem;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--dumi-surface);
+  border: 1px solid var(--dumi-line);
+}
+.msg--bot .dumi { --dumi-size: 1.75rem; flex: none; margin-top: 0.15rem; }
+.msg__body { flex: 1; min-width: 0; }
+.msg__text { white-space: pre-wrap; }
+
+/* Confidence is carried by a left border style, and by the caution text
+ * itself. Never by colour alone. */
+.msg--bot[data-confidence="low"] .msg__body,
+.msg--bot[data-confidence="insufficient"] .msg__body {
+  border-left: 3px solid var(--dumi-line);
+  padding-left: 0.75rem;
+}
+
+.callout {
+  margin: 0 0 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius);
+  font-size: 0.9375rem;
+}
+.callout--caution {
+  background: var(--dumi-surface);
+  border: 1px solid var(--dumi-line);
+  color: var(--dumi-ink-soft);
+}
+/* Emergency information is bordered heavily and placed first. It must not
+ * rely on colour: the border weight and the leading position carry it. */
+.callout--emergency {
+  background: var(--dumi-surface);
+  border: 2px solid var(--dumi-accent);
+  font-weight: 600;
+  color: var(--dumi-ink);
+}
+
+/* --- citations ----------------------------------------------------------- */
+.sources {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--dumi-line);
+}
+.sources__title {
+  margin: 0 0 0.5rem;
+  font-family: var(--dumi-font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dumi-ink-soft);
+}
+.sources__list { margin: 0; padding-left: 1.25rem; font-size: 0.875rem; }
+.sources__list li { margin-bottom: 0.5rem; line-height: 1.5; }
+.sources__list a { color: var(--dumi-flow); }
+.sources__where,
+.sources__lang,
+.sources__date {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: var(--dumi-ink-soft);
+  font-size: 0.8125rem;
+}
+.sources__lang::before { content: "· "; }
+.sources__date::before { content: "· "; }
+
+/* --- composer ------------------------------------------------------------ */
+.ask {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0.75rem 0;
+  background: var(--dumi-ground);
+}
+.ask input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: 999px;
+  background: var(--dumi-surface);
+  color: var(--dumi-ink);
+  font: inherit;
+}
+.send, .stop {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 1.1rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: 999px;
+  background: var(--dumi-surface);
+  color: var(--dumi-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.send:hover, .stop:hover { background: var(--dumi-ground); }
+.status { min-height: 1.25rem; margin: 0.5rem 0 0; font-size: 0.875rem; color: var(--dumi-ink-soft); }
+
+/* --- small screens ------------------------------------------------------- */
+@media (max-width: 30rem) {
+  .bar { padding: 0.5rem 0.75rem; }
+  .chat { padding: 0.75rem 0.75rem 6rem; }
+  .msg--user .msg__text { max-width: 100%; }
+}
+
+/* Motion in this interface is limited to the mark, which respects
+ * prefers-reduced-motion in dumi-mark.css. Nothing else animates. */

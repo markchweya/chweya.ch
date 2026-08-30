@@ -41,6 +41,21 @@ logger = get_logger(__name__)
 # that separation.
 PUBLIC_STATES = (PublicationState.OFFICIAL.value, PublicationState.SUPPLEMENTARY.value)
 
+# Maximum cosine distance for a semantic hit to count as relevant.
+#
+# This threshold is the difference between a system that says "I could not
+# verify that" and one that never says it. Vector search returns its k nearest
+# neighbours whatever the distance, so without a floor a question about dog
+# tax in Reykjavik retrieves the closest Zug pages, the evidence set is
+# non-empty, and the model is asked to answer from passages that have nothing
+# to do with the question.
+#
+# 0.62 on normalised vectors corresponds to a cosine similarity of about 0.38.
+# It is a starting value, not a tuned one: it needs calibrating against a real
+# embedding model and real Zug content, which is recorded in the Phase 4
+# report as an open task.
+MAX_SEMANTIC_DISTANCE = 0.62
+
 # Reciprocal rank fusion constant. 60 is the value from the original paper and
 # is deliberately large: it flattens the difference between ranks 1 and 2 so
 # that a passage found by both arms outranks one found first by only one.
@@ -76,6 +91,9 @@ class RetrievedChunk:
     # Scoring. Kept separate so the confidence policy can see how a passage
     # was found, not only how highly it scored.
     semantic_rank: int | None = None
+    # Cosine distance from the question. Kept so the confidence policy can see
+    # how close the match actually was, not only where it ranked.
+    semantic_distance: float | None = None
     keyword_rank: int | None = None
     fused_score: float = 0.0
 
@@ -174,8 +192,14 @@ def semantic_search(
     *,
     limit: int = 20,
     languages: tuple[str, ...] | None = None,
+    max_distance: float = MAX_SEMANTIC_DISTANCE,
 ) -> list[RetrievedChunk]:
-    """Rank passages by embedding distance."""
+    """Rank passages by embedding distance, discarding distant ones.
+
+    The distance filter is what makes insufficient-evidence reachable. Without
+    it the arm always returns its k nearest neighbours, so no question ever
+    produces an empty evidence set.
+    """
     vector = provider.embed_query(question)
 
     query = _base_query().where(
@@ -188,12 +212,19 @@ def semantic_search(
     if languages:
         query = query.where(Chunk.language.in_(languages))
 
-    query = query.order_by(Chunk.embedding.cosine_distance(vector)).limit(limit)
+    distance = Chunk.embedding.cosine_distance(vector)
+    query = (
+        query.add_columns(distance.label("distance"))
+        .where(distance < max_distance)
+        .order_by(distance)
+        .limit(limit)
+    )
 
     results: list[RetrievedChunk] = []
     for rank, row in enumerate(session.execute(query), start=1):
         chunk = _row_to_chunk(row)
         chunk.semantic_rank = rank
+        chunk.semantic_distance = float(row.distance)
         results.append(chunk)
     return results
 

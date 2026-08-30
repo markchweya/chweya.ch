@@ -15,8 +15,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
-from app.api import health
+from app.api import chat, health
 from app.config import Environment, get_settings
 from app.middleware import (
     RequestIdMiddleware,
@@ -83,7 +85,19 @@ def create_app() -> FastAPI:
 
     app.add_exception_handler(Exception, unhandled_exception_handler)
 
+    # The Dumi design system is served unchanged from shared/brand. It is not
+    # copied into the application: one canonical copy means the interface and
+    # the brand specimen can never drift apart.
+    app.mount("/brand", StaticFiles(directory="shared/brand"), name="brand")
+    app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon() -> FileResponse:
+        """Browsers request this path directly, before parsing any markup."""
+        return FileResponse("shared/brand/favicon/favicon.ico")
+
     app.include_router(health.router)
+    app.include_router(chat.router)
 
     return app
 
