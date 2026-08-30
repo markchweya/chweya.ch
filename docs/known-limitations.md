@@ -33,7 +33,11 @@ against nothing.
   startup marks the orphaned run as failed so the source is not blocked. The
   compose worker service exists for moving this out of the web process, and
   is not wired up.
-- Multi-level link following. One level within a source's base path.
+- A persistent crawl frontier. The crawl walks links breadth-first within a
+  source's base path, but the frontier lives in memory for one run: a run
+  that hits the page budget (`CRAWLER_MAX_PAGES_PER_RUN`) forgets where it
+  stopped, and pages behind a 304 hub are only reached through the sitemap
+  or another fetched page.
 - OCR. Scanned PDFs are detected and flagged, never read.
 - Concurrency. URLs are crawled one at a time; `CRAWLER_MAX_CONCURRENCY` is
   read and unused.

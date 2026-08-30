@@ -249,8 +249,14 @@ NO_ANSWER_SENTINEL = "NO_ANSWER"
 
 
 def is_no_answer(text: str) -> bool:
-    """Whether a generated response declares the evidence insufficient."""
-    return text.strip().lstrip('"\'').upper().startswith(NO_ANSWER_SENTINEL)
+    """Whether a generated response declares the evidence insufficient.
+
+    The instruction says to reply with the sentinel alone; a small model
+    wraps it in prose anyway ("Therefore, the answer is NO_ANSWER."). Any
+    occurrence counts. A response carrying the sentinel is a declaration of
+    insufficiency and must never reach the screen as an answer.
+    """
+    return NO_ANSWER_SENTINEL in text.upper()
 
 
 # Sent back to the model, once, when it answered without citing. A small
@@ -611,13 +617,14 @@ async def stream_answer(
         yield ("answer", prepared)
         return
 
-    # Deltas are held back until the response is known not to be the
-    # NO_ANSWER sentinel. Streaming the word NO_ANSWER to the screen and then
-    # swapping it for the refusal would read as a malfunction; once the first
-    # characters diverge from the sentinel, the held text is released and the
-    # stream flows normally.
+    # The word NO_ANSWER must never reach the screen, whether the model
+    # replies with the sentinel alone or wraps it in prose partway through.
+    # Deltas are held while the reply could still be the bare sentinel, and a
+    # rolling window watches for it appearing later; from the moment it
+    # shows, the stream goes quiet and the final event carries the refusal.
     accumulated: list[str] = []
     held: list[str] = []
+    window = ""
     gate_open = False
     suppress = False
     try:
@@ -629,12 +636,14 @@ async def stream_answer(
             accumulated.append(chunk.text)
             if suppress:
                 continue
+            # Long enough to catch the sentinel split across chunks.
+            window = (window + chunk.text.upper())[-64:]
+            if NO_ANSWER_SENTINEL in window:
+                suppress = True
+                held.clear()
+                continue
             if not gate_open:
                 head = strip_markup("".join(accumulated)).lstrip().upper()
-                if head.startswith(NO_ANSWER_SENTINEL):
-                    suppress = True
-                    held.clear()
-                    continue
                 if NO_ANSWER_SENTINEL.startswith(head):
                     held.append(chunk.text)
                     continue

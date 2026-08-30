@@ -78,11 +78,11 @@
     <h2 id="new-source">Add a source</h2>
     <p>
       A source is one area of an allowed site. The crawler reads its sitemap
-      and follows links one level within the base path, respecting robots.txt
-      and pausing at least a second between requests. Only these hosts are
-      permitted: {% for host in allowed_hosts %}{{ host }}{% if not loop.last %}, {% endif %}{% endfor %}.
-      A crawl of a large area takes a while; start with a specific section
-      such as https://www.zug.ch/behoerden rather than the whole site.
+      and follows links within the base path until the page budget for one
+      run is spent, respecting robots.txt and pausing between requests. Only
+      these hosts are permitted: {% for host in allowed_hosts %}{{ host }}{% if not loop.last %}, {% endif %}{% endfor %}.
+      A base URL of https://www.zg.ch takes the whole portal; a crawl that
+      size takes a while, and embedding it takes longer.
     </p>
     <form class="auth__form" method="post" action="/admin/sources">
       <label for="src-name">Name</label>

@@ -106,6 +106,87 @@ def crawl_env(db):  # type: ignore[no-untyped-def]
     return build
 
 
+HUB = b"""<html lang="de"><head><title>Behoerden</title></head><body><main>
+<h1>Behoerden</h1>
+<p>Dienstleistungen der Verwaltung fuer Einwohnerinnen und Einwohner.</p>
+<a href="/behoerden/anmeldung">Anmeldung</a>
+<a href="/steuern/andere">Steuern</a>
+</main></body></html>"""
+
+LEVEL_TWO = b"""<html lang="de"><head><title>Anmeldung</title></head><body><main>
+<h1>Anmeldung</h1>
+<p>Die Anmeldung erfolgt bei der Einwohnerkontrolle der Gemeinde.</p>
+<a href="/behoerden/gebuehren">Gebuehren</a>
+</main></body></html>"""
+
+
+class LinkedSite:
+    """A site with no sitemap whose pages link to each other."""
+
+    def __init__(self, pages: dict[str, bytes]) -> None:
+        self.requested: list[str] = []
+        self._pages = pages
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        self.requested.append(path)
+        if path == "/robots.txt":
+            return httpx.Response(
+                200, content=b"User-agent: *\n", headers={"Content-Type": "text/plain"}
+            )
+        body = self._pages.get(path)
+        if body is None:
+            return httpx.Response(404)
+        return httpx.Response(200, content=body, headers={"Content-Type": "text/html"})
+
+
+class TestLinkFollowing:
+    """Without a sitemap the crawl walks links breadth-first inside the
+    source's area, so a source covers its whole section rather than only the
+    pages one level below its base URL."""
+
+    PAGES = {
+        "/behoerden": HUB,
+        "/behoerden/anmeldung": LEVEL_TWO,
+        "/behoerden/gebuehren": PAGE,
+    }
+
+    def _build(self, db, **overrides):  # type: ignore[no-untyped-def]
+        settings = make_settings(**overrides)
+        site = LinkedSite(dict(self.PAGES))
+        client = httpx.AsyncClient(
+            transport=httpx.MockTransport(site), follow_redirects=False
+        )
+        fetcher = GuardedFetcher(settings=settings, client=client, resolver=resolver)
+        source = Source(
+            name="Behoerden", base_url="https://www.zug.ch/behoerden", default_language="de"
+        )
+        db.add(source)
+        db.flush()
+        return source, site, Crawler(db, fetcher, settings=settings), fetcher
+
+    async def test_links_are_followed_beyond_one_level(self, db) -> None:  # type: ignore[no-untyped-def]
+        source, site, crawler, fetcher = self._build(db)
+        run = await crawler.run(source)
+        await fetcher.aclose()
+        assert "/behoerden/anmeldung" in site.requested
+        assert "/behoerden/gebuehren" in site.requested, "two levels down is reached"
+        assert run.urls_fetched == 3
+
+    async def test_links_outside_the_source_area_are_not_followed(self, db) -> None:  # type: ignore[no-untyped-def]
+        source, site, crawler, fetcher = self._build(db)
+        await crawler.run(source)
+        await fetcher.aclose()
+        assert "/steuern/andere" not in site.requested
+
+    async def test_the_page_budget_caps_the_walk(self, db) -> None:  # type: ignore[no-untyped-def]
+        source, site, crawler, fetcher = self._build(db, crawler_max_pages_per_run=2)
+        await crawler.run(source)
+        await fetcher.aclose()
+        crawled = [path for path in site.requested if path.startswith("/behoerden")]
+        assert len(crawled) == 2
+
+
 class TestDiscovery:
     async def test_sitemap_urls_outside_the_source_area_are_not_crawled(self, db, crawl_env) -> None:  # type: ignore[no-untyped-def]
         """Adding one source must not widen the crawl to the whole domain."""

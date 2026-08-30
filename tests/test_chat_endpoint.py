@@ -344,6 +344,26 @@ class TestAnswering:
         assert payload["citations"], "the retrieved pages still arrive as links"
         assert client.stub.calls == 1
 
+    def test_a_sentinel_wrapped_in_prose_still_becomes_the_refusal(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The instruction says to reply with the sentinel alone; the model
+        wraps it in prose anyway. Any occurrence is a declaration of
+        insufficiency, and none of the prose may reach the screen."""
+        client.stub.text = (
+            "The rules are not detailed in the provided evidence. "
+            "Therefore, the answer is NO_ANSWER. The user should confirm "
+            "this information with the cited page or office."
+        )
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert payload["is_refusal"]
+        assert "NO_ANSWER" not in payload["text"]
+        assert "provided evidence" not in payload["text"]
+        assert payload["citations"]
+        assert client.stub.calls == 1
+
     def test_markdown_markers_are_stripped_from_the_answer(self, client) -> None:  # type: ignore[no-untyped-def]
         """The interface renders plain text, so **bold** would reach a
         resident as literal asterisks."""
@@ -724,6 +744,23 @@ class TestStreaming:
         assert payload["is_refusal"]
         assert "NO_ANSWER" not in payload["text"]
         assert payload["citations"]
+
+    def test_a_mid_prose_sentinel_silences_the_stream_from_that_point(self, client) -> None:  # type: ignore[no-untyped-def]
+        """When the sentinel arrives partway through prose, the word itself
+        and everything after it stay off the wire, and the final event
+        carries the refusal."""
+        client.stub.text = (
+            "The rules are not detailed here. Therefore, the answer is "
+            "NO_ANSWER. Confirm this with the office."
+        )
+        events = read_sse(client, "Was kostet die Anmeldung?")
+        for event in events:
+            if event["type"] == "delta":
+                assert "NO_ANSWER" not in event["text"]
+                assert "Confirm" not in event["text"]
+        payload = events[-1]["payload"]
+        assert payload["is_refusal"]
+        assert "NO_ANSWER" not in payload["text"]
 
     def test_an_uncited_stream_is_retried_before_the_final_event(self, client) -> None:  # type: ignore[no-untyped-def]
         """The uncited first attempt streams, the corrective retry is

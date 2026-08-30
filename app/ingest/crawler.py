@@ -24,7 +24,7 @@ not.
 from __future__ import annotations
 
 import datetime as dt
-from collections import Counter
+from collections import Counter, deque
 from dataclasses import dataclass, field
 
 from sqlalchemy import func, select
@@ -149,36 +149,24 @@ class Crawler:
                 urls.append(decision.normalised)
 
         if not urls:
-            # No usable sitemap. Fall back to following links from the
-            # source's own page, one level deep. Deeper following is not
-            # implemented: it needs a frontier with its own persistence and
-            # loop control, and a sitemap is the better path where one exists.
-            urls, link_errors = await self._follow_links_once(source)
-            errors.extend(link_errors)
+            # No usable sitemap. The source's own page seeds the crawl and
+            # the frontier in run() walks outward from there, following links
+            # within the source's area until the page budget is spent.
+            urls = [source.base_url]
 
         return urls, errors, excluded
 
-    async def _follow_links_once(self, source: Source) -> tuple[list[str], list[str]]:
-        """Fetch the source page and return the links inside its own area.
+    def _links_in_scope(self, html: str, base: str, source: Source) -> list[str]:
+        """The links on a fetched page that this source may crawl.
 
-        One level only. Every candidate goes through the allowlist, and links
-        outside the source's base path are dropped even when the host is
-        allowed, so adding a source does not quietly widen the crawl to the
-        whole domain.
+        Every candidate goes through the allowlist, and links outside the
+        source's base path are dropped even when the host is allowed, so
+        adding a source does not quietly widen the crawl to the whole domain.
         """
-        result = await self._fetcher.fetch(source.base_url)
-        if not result.ok:
-            return [source.base_url], [f"{source.base_url}: {result.reason}"]
-
-        if result.detected_type not in ("text/html", "application/xhtml+xml"):
-            return [source.base_url], []
-
-        html = result.content.decode("utf-8", errors="replace")
         prefix = source.base_url.rstrip("/")
-        found: list[str] = [source.base_url]
-        seen = {source.base_url}
-
-        for link in extract_links(html, source.base_url):
+        found: list[str] = []
+        seen: set[str] = set()
+        for link in extract_links(html, base):
             decision = evaluate(link, self._settings.allowed_hosts)
             if not decision.allowed:
                 continue
@@ -187,8 +175,7 @@ class Crawler:
             if decision.normalised not in seen:
                 seen.add(decision.normalised)
                 found.append(decision.normalised)
-
-        return found, []
+        return found
 
     # -------------------------------------------------------------- fetch
 
@@ -203,21 +190,25 @@ class Crawler:
             self._session.flush()
         return record_row
 
-    async def crawl_url(self, url: str, source: Source, outcome: CrawlOutcome) -> None:
-        """Fetch, extract and persist one URL."""
+    async def crawl_url(self, url: str, source: Source, outcome: CrawlOutcome) -> list[str]:
+        """Fetch, extract and persist one URL.
+
+        Returns the in-scope links found on a fetched HTML page, so the run
+        loop can extend its frontier. Every other outcome returns no links.
+        """
         row = self._url_record(url, source)
 
         if row.is_excluded:
             outcome.blocked += 1
             outcome.blocked_reasons["administrator_excluded"] += 1
-            return
+            return []
 
         allowed, reason = await self._robots.allows(url)
         if not allowed:
             outcome.blocked += 1
             outcome.blocked_reasons[reason] += 1
             row.last_failure_reason = reason
-            return
+            return []
 
         # Respect a Crawl-delay the site published.
         policy = await self._robots.policy_for(url)
@@ -233,11 +224,14 @@ class Crawler:
         row.last_fetched_at = _utcnow()
 
         if result.not_modified:
+            # A 304 carries no body, so it also carries no links. The page's
+            # children are reached through the sitemap or through other pages
+            # this run does fetch.
             outcome.unchanged += 1
             row.last_failure_reason = ""
             row.consecutive_failures = 0
             self._touch_current_version(row)
-            return
+            return []
 
         if not result.ok:
             # An allowlist or address refusal is a block; anything else is a
@@ -251,7 +245,7 @@ class Crawler:
             row.last_status_code = result.status_code
             row.last_failure_reason = result.reason
             row.consecutive_failures += 1
-            return
+            return []
 
         outcome.fetched += 1
         row.last_status_code = result.status_code
@@ -267,7 +261,14 @@ class Crawler:
             row.last_failure_reason = f"unhandled_type_{result.detected_type or 'unknown'}"
             outcome.blocked += 1
             outcome.blocked_reasons[row.last_failure_reason] += 1
-            return
+            return []
+
+        # Links come from every fetched HTML body, changed or not: an
+        # unchanged hub page still leads to pages that did change.
+        links: list[str] = []
+        if handler == "html":
+            html = result.content.decode("utf-8", errors="replace")
+            links = self._links_in_scope(html, url, source)
 
         # Unchanged content still costs a body when the server sends no
         # validators, so the hash is the second line of defence.
@@ -275,12 +276,13 @@ class Crawler:
         if row.content_hash == digest:
             outcome.unchanged += 1
             self._touch_current_version(row)
-            return
+            return links
 
         row.content_hash = digest
         row.last_changed_at = _utcnow()
 
         self._persist(result, row, source, handler, outcome)
+        return links
 
     def _touch_current_version(self, row: CrawledUrl) -> None:
         """Record that the stored version was re-confirmed as current."""
@@ -486,15 +488,28 @@ class Crawler:
 
         try:
             urls, errors, excluded = await self.discover_urls(source)
-            outcome.discovered = len(urls)
             outcome.errors.extend(errors)
             # Counted so the dashboard can explain the gap between what a
             # sitemap listed and what was actually crawled.
             outcome.blocked += sum(excluded.values())
             outcome.blocked_reasons.update(excluded)
 
-            for url in urls[: self._settings.crawler_max_pages_per_run]:
-                await self.crawl_url(url, source, outcome)
+            # Breadth-first from the sitemap entries, with every fetched
+            # page's in-scope links joining the frontier. This is what makes
+            # a source cover its whole area rather than only what the
+            # sitemap lists, and the page budget is what keeps one source
+            # from crawling forever.
+            frontier = deque(urls)
+            queued = set(urls)
+            crawled = 0
+            while frontier and crawled < self._settings.crawler_max_pages_per_run:
+                url = frontier.popleft()
+                crawled += 1
+                for link in await self.crawl_url(url, source, outcome):
+                    if link not in queued:
+                        queued.add(link)
+                        frontier.append(link)
+            outcome.discovered = len(queued)
 
             run.state = CrawlRunState.COMPLETED.value
             source.last_crawl_succeeded_at = _utcnow()
