@@ -93,25 +93,43 @@ body {
 }
 .icon-button:hover { background: var(--dumi-ground); color: var(--dumi-ink); }
 
-.langs { display: flex; gap: 0.25rem; }
-.langs a {
-  /* 44px minimum touch target, WCAG 2.2 Target Size (Minimum). */
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
-  border-radius: var(--radius);
-  color: var(--dumi-ink-soft);
-  text-decoration: none;
-  font-size: 0.875rem;
+/* The language menu: a native disclosure behind the translate glyph. */
+.lang-menu { position: relative; }
+.lang-menu__summary {
+  gap: 0.3rem;
+  padding: 0 0.6rem;
+  cursor: pointer;
+  list-style: none;
 }
-.langs a:hover { text-decoration: underline; }
-/* The current language is marked by weight and an underline as well as
- * background, so it does not depend on colour perception. */
-.langs a[aria-current="true"] {
-  background: var(--dumi-ground);
+.lang-menu__summary::-webkit-details-marker { display: none; }
+.lang-menu__code { font-size: 0.8125rem; font-weight: 600; }
+.lang-menu__list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  z-index: 20;
+  display: grid;
+  min-width: 9.5rem;
+  padding: 0.4rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: 12px;
+  background: var(--dumi-surface);
+  box-shadow: 0 8px 24px rgb(var(--dumi-deep-rgb) / 0.12);
+}
+.lang-menu__list a {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border-radius: 8px;
   color: var(--dumi-ink);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+.lang-menu__list a:hover { background: var(--dumi-ground); }
+/* The current language is marked by weight and an underline as well, so it
+ * does not depend on colour perception. */
+.lang-menu__list a[aria-current="true"] {
   font-weight: 600;
   text-decoration: underline;
 }

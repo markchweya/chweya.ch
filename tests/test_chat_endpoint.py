@@ -253,6 +253,16 @@ class TestChatPage:
         assert 'id="hero"' not in html
         assert 'class="suggestion"' not in html
 
+    def test_the_language_menu_offers_every_language_in_itself(self, client) -> None:  # type: ignore[no-untyped-def]
+        """A native disclosure, so it works without any script. Each option
+        is named in its own language, which is the one spelling every reader
+        of that language recognises."""
+        html = client.get("/").text
+        assert 'class="lang-menu"' in html
+        for name in ("Deutsch", "English", "Français", "Italiano"):
+            assert name in html
+        assert 'aria-current="true"' in html
+
     def test_a_new_chat_control_exists_and_keeps_the_language(self, client) -> None:  # type: ignore[no-untyped-def]
         """An icon-only link: nothing is stored server-side, so a new chat
         is simply the page again, in the language already chosen."""

@@ -38,6 +38,14 @@
     if (main) main.classList.remove("chat--welcome");
   }
 
+  // The language menu is a native disclosure and works without any script;
+  // this only closes it when the person clicks somewhere else, which the
+  // element does not do on its own.
+  document.addEventListener("click", function (event) {
+    var open = document.querySelector(".lang-menu[open]");
+    if (open && !open.contains(event.target)) open.removeAttribute("open");
+  });
+
   if (suggestions) {
     suggestions.addEventListener("click", function (event) {
       var button = event.target.closest("button.suggestion");

@@ -42,7 +42,14 @@ router = APIRouter(tags=["chat"])
 
 templates = Jinja2Templates(directory="app/templates")
 
-LANGUAGE_LABELS = [("de", "DE"), ("en", "EN"), ("fr", "FR"), ("it", "IT")]
+# Each language named in itself, which is the one spelling every reader of
+# that language recognises. Translating the names would defeat the point.
+LANGUAGE_LABELS = [
+    ("de", "Deutsch"),
+    ("en", "English"),
+    ("fr", "Français"),
+    ("it", "Italiano"),
+]
 
 
 @dataclass

@@ -21,17 +21,29 @@
     </svg>
   </a>
 
-  {# The language selector is a real form, so it works without JavaScript and
-     is operable by keyboard. aria-current marks the active option, so the
-     choice is conveyed by more than colour. #}
-  <nav class="langs" aria-label="{{ t('chat.language') }}">
-    {% for code, label in languages %}
-      <a href="?lang={{ code }}"
-         hreflang="{{ code }}"
-         lang="{{ code }}"
-         {% if code == language %}aria-current="true"{% endif %}>{{ label }}</a>
-    {% endfor %}
-  </nav>
+  {# The language selector: a native disclosure behind a translate glyph,
+     so it works without JavaScript and is operable by keyboard. The options
+     are links in their own language; aria-current marks the active one, so
+     the choice is conveyed by more than colour. #}
+  <details class="lang-menu">
+    <summary class="icon-button lang-menu__summary" title="{{ t('chat.language') }}">
+      <span class="visually-hidden">{{ t('chat.language') }}</span>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/>
+        <path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>
+      </svg>
+      <span class="lang-menu__code" aria-hidden="true">{{ language | upper }}</span>
+    </summary>
+    <nav class="lang-menu__list" aria-label="{{ t('chat.language') }}">
+      {% for code, label in languages %}
+        <a href="?lang={{ code }}"
+           hreflang="{{ code }}"
+           lang="{{ code }}"
+           {% if code == language %}aria-current="true"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+  </details>
   </div>
 </header>
 
