@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Sources · Dumi{% endblock %}
+{% block body %}
+<header class="bar">
+  <span class="dumi-lockup">
+    {% include "_mark.html" %} Dumi
+    <span class="dumi-lockup__tag">{{ t('admin.title') }}</span>
+  </span>
+  <a href="/admin">{{ t('admin.title') }}</a>
+</header>
+
+<main id="main" class="admin">
+  <h1>Sources</h1>
+  {% if sources %}
+    <table class="grid">
+      <caption class="visually-hidden">Configured crawl sources</caption>
+      <thead>
+        <tr><th scope="col">Name</th><th scope="col">Base URL</th>
+            <th scope="col">Language</th><th scope="col">State</th>
+            <th scope="col">Last succeeded</th></tr>
+      </thead>
+      <tbody>
+        {% for source in sources %}
+          <tr>
+            <th scope="row">{{ source.name }}</th>
+            <td>{{ source.base_url }}</td>
+            <td>{{ source.default_language | upper }}</td>
+            {# State is a word, not only a colour. #}
+            <td>{{ 'Paused' if source.is_paused else 'Active' }}</td>
+            <td>{{ source.last_crawl_succeeded_at.strftime('%d.%m.%Y %H:%M') if source.last_crawl_succeeded_at else 'never' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No sources configured.</p>
+  {% endif %}
+</main>
+{% endblock %}

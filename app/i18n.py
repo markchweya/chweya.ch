@@ -164,6 +164,61 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "dernière vérification",
         "it": "ultima verifica",
     },
+    "auth.invalid_credentials": {
+        "de": "E-Mail-Adresse oder Passwort ist falsch.",
+        "en": "That email address or password is incorrect.",
+        "fr": "Adresse e-mail ou mot de passe incorrect.",
+        "it": "Indirizzo e-mail o password non corretti.",
+    },
+    "auth.locked": {
+        "de": "Zu viele Fehlversuche. Das Konto ist vorübergehend gesperrt.",
+        "en": "Too many failed attempts. The account is temporarily locked.",
+        "fr": "Trop de tentatives échouées. Le compte est temporairement bloqué.",
+        "it": "Troppi tentativi falliti. L'account è temporaneamente bloccato.",
+    },
+    "auth.sign_in": {
+        "de": "Anmelden", "en": "Sign in", "fr": "Se connecter", "it": "Accedi",
+    },
+    "auth.sign_out": {
+        "de": "Abmelden", "en": "Sign out", "fr": "Se déconnecter", "it": "Esci",
+    },
+    "auth.email": {
+        "de": "E-Mail-Adresse", "en": "Email address",
+        "fr": "Adresse e-mail", "it": "Indirizzo e-mail",
+    },
+    "auth.password": {
+        "de": "Passwort", "en": "Password", "fr": "Mot de passe", "it": "Password",
+    },
+    "auth.new_password": {
+        "de": "Neues Passwort", "en": "New password",
+        "fr": "Nouveau mot de passe", "it": "Nuova password",
+    },
+    "auth.repeat_password": {
+        "de": "Passwort wiederholen", "en": "Repeat password",
+        "fr": "Répéter le mot de passe", "it": "Ripeta la password",
+    },
+    "auth.passwords_differ": {
+        "de": "Die beiden Passwörter stimmen nicht überein.",
+        "en": "The two passwords do not match.",
+        "fr": "Les deux mots de passe ne correspondent pas.",
+        "it": "Le due password non corrispondono.",
+    },
+    "auth.must_change_password": {
+        "de": "Bitte legen Sie ein neues Passwort fest, bevor Sie fortfahren.",
+        "en": "Please set a new password before continuing.",
+        "fr": "Veuillez définir un nouveau mot de passe avant de continuer.",
+        "it": "Imposti una nuova password prima di continuare.",
+    },
+    "auth.password_changed": {
+        "de": "Passwort geändert. Alle anderen Sitzungen wurden beendet.",
+        "en": "Password changed. All other sessions have been ended.",
+        "fr": "Mot de passe modifié. Toutes les autres sessions ont été fermées.",
+        "it": "Password modificata. Tutte le altre sessioni sono state chiuse.",
+    },
+    "admin.title": {
+        "de": "Verwaltung", "en": "Administration",
+        "fr": "Administration", "it": "Amministrazione",
+    },
     "chat.skip_to_content": {
         "de": "Zum Inhalt springen",
         "en": "Skip to content",

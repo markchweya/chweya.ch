@@ -237,3 +237,92 @@ body {
 
 /* Motion in this interface is limited to the mark, which respects
  * prefers-reduced-motion in dumi-mark.css. Nothing else animates. */
+
+/* --- administration ------------------------------------------------------
+ * Same tokens, same components. The admin area is not a separate design.
+ */
+.auth {
+  max-width: 24rem;
+  margin: 4rem auto;
+  padding: 0 1rem;
+}
+.auth__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  font-family: var(--dumi-font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.auth__title .dumi { --dumi-size: 1.75rem; }
+.auth__form { display: grid; gap: 0.35rem; }
+.auth__form label { font-size: 0.875rem; font-weight: 600; margin-top: 0.75rem; }
+.auth__form input {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: var(--radius);
+  background: var(--dumi-surface);
+  color: var(--dumi-ink);
+  font: inherit;
+}
+.auth__form button { margin-top: 1.25rem; }
+
+/* Errors carry an icon-free text marker as well as a border, so the meaning
+ * does not depend on colour. */
+.auth__error,
+.auth__notice {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--dumi-line);
+  border-left: 4px solid var(--dumi-accent);
+  border-radius: var(--radius);
+  background: var(--dumi-surface);
+  font-size: 0.9375rem;
+}
+
+.admin { max-width: 60rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+.admin h1 { font-family: var(--dumi-font-display); font-size: 1.5rem; }
+.admin h2 {
+  font-family: var(--dumi-font-display);
+  font-size: 1.05rem;
+  margin-top: 2rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--dumi-line);
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+}
+.stats > div {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: var(--radius);
+  background: var(--dumi-surface);
+}
+.stats dt { font-size: 0.8125rem; color: var(--dumi-ink-soft); }
+.stats dd {
+  margin: 0.2rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  /* Digits line up in columns. */
+  font-variant-numeric: tabular-nums;
+}
+
+.grid { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9375rem; }
+.grid th, .grid td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--dumi-line);
+  text-align: left;
+  vertical-align: top;
+}
+.grid thead th {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--dumi-ink-soft);
+}
+/* Wide tables scroll inside their own container rather than the page. */
+.admin table { display: block; overflow-x: auto; }

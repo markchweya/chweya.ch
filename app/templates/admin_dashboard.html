@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ t('admin.title') }} · Dumi{% endblock %}
+{% block body %}
+<header class="bar">
+  <span class="dumi-lockup">
+    {% include "_mark.html" %} Dumi
+    <span class="dumi-lockup__tag">{{ t('admin.title') }}</span>
+  </span>
+  <form method="post" action="/admin/logout">
+    <button type="submit" class="send">{{ t('auth.sign_out') }}</button>
+  </form>
+</header>
+
+<main id="main" class="admin">
+  <h1>{{ t('admin.title') }}</h1>
+
+  {# Every figure here is a live count. A dashboard showing invented numbers
+     is worse than one showing none. #}
+  <section aria-labelledby="content-heading">
+    <h2 id="content-heading">Content</h2>
+    <dl class="stats">
+      <div><dt>Sources</dt><dd>{{ stats.sources }}{% if stats.sources_paused %} ({{ stats.sources_paused }} paused){% endif %}</dd></div>
+      <div><dt>Documents</dt><dd>{{ stats.documents }}</dd></div>
+      <div><dt>Versions</dt><dd>{{ stats.versions }}</dd></div>
+      <div><dt>Passages</dt><dd>{{ stats.chunks }}</dd></div>
+      <div><dt>Passages embedded</dt><dd>{{ stats.chunks_embedded }} / {{ stats.chunks }}</dd></div>
+      <div><dt>Approved versions</dt><dd>{{ stats.approved }}</dd></div>
+      <div><dt>Awaiting review</dt><dd>{{ stats.awaiting_review }}</dd></div>
+      <div><dt>Active users</dt><dd>{{ stats.users }}</dd></div>
+    </dl>
+  </section>
+
+  <section aria-labelledby="lang-heading">
+    <h2 id="lang-heading">Language coverage</h2>
+    {% if stats.languages %}
+      <dl class="stats">
+        {% for code, total in stats.languages.items() %}
+          <div><dt>{{ code | upper }}</dt><dd>{{ total }}</dd></div>
+        {% endfor %}
+      </dl>
+    {% else %}
+      <p>No documents indexed yet.</p>
+    {% endif %}
+  </section>
+
+  <section aria-labelledby="sync-heading">
+    <h2 id="sync-heading">Last synchronisation</h2>
+    {% if latest_run %}
+      <dl class="stats">
+        <div><dt>State</dt><dd>{{ latest_run.state }}</dd></div>
+        <div><dt>Started</dt><dd>{{ latest_run.started_at.strftime('%d.%m.%Y %H:%M') if latest_run.started_at else '—' }}</dd></div>
+        <div><dt>Fetched</dt><dd>{{ latest_run.urls_fetched }}</dd></div>
+        <div><dt>Unchanged</dt><dd>{{ latest_run.urls_unchanged }}</dd></div>
+        <div><dt>Failed</dt><dd>{{ latest_run.urls_failed }}</dd></div>
+        <div><dt>Blocked</dt><dd>{{ latest_run.urls_blocked }}</dd></div>
+      </dl>
+      {% if latest_run.blocked_reasons %}
+        <h3>Why URLs were skipped</h3>
+        <ul>
+          {% for reason, count in latest_run.blocked_reasons.items() %}
+            <li>{{ reason }}: {{ count }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% else %}
+      <p>No crawl has run yet.</p>
+    {% endif %}
+  </section>
+
+  {% if who.can(permission.MANAGE_SOURCES) %}
+    <p><a href="/admin/sources">Manage sources</a></p>
+  {% endif %}
+</main>
+{% endblock %}

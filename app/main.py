@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import chat, health
+from app.api import admin, chat, health
 from app.config import Environment, get_settings
 from app.middleware import (
     RequestIdMiddleware,
@@ -98,6 +98,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(chat.router)
+    app.include_router(admin.router)
 
     return app
 
