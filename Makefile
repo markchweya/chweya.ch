@@ -138,6 +138,10 @@ security: ## Run the security checks
 	@echo "== configuration =="
 	$(PY) -m app.cli check-config
 
+.PHONY: evaluate
+evaluate: ## Run the evaluation suite, including the adversarial cases
+	$(PY) -m app.cli evaluate
+
 .PHONY: verify-audit
 verify-audit: ## Check the audit log hash chain
 	$(PY) -m app.cli verify-audit

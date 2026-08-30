@@ -8,6 +8,7 @@ COMMANDS = {
     "bootstrap-admin": "Create the first administrator account.",
     "verify-audit": "Walk the audit log and confirm its hash chain is intact.",
     "check-config": "Validate configuration and report what production would refuse.",
+    "evaluate": "Run the evaluation suite, including the adversarial cases.",
 }
 
 
@@ -38,6 +39,11 @@ def main() -> int:
 
     if command == "check-config":
         from app.cli.check_config import main as run
+
+        return run(argv)
+
+    if command == "evaluate":
+        from app.cli.evaluate import main as run
 
         return run(argv)
 
