@@ -526,3 +526,30 @@ class TestSmallTalk:
         ).json()
         assert "CHF 20" in payload["text"]
         assert client.stub.calls == 1
+
+    def test_who_are_you_gets_the_self_description(self, client) -> None:  # type: ignore[no-untyped-def]
+        payload = client.post(
+            "/ask", json={"question": "who are you?", "lang": "en"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert not payload["is_refusal"]
+        assert "Dumi" in payload["text"]
+        assert "official" in payload["text"]
+        assert client.stub.calls == 0
+
+    def test_what_can_you_help_me_with_is_answered(self, client) -> None:  # type: ignore[no-untyped-def]
+        payload = client.post(
+            "/ask", json={"question": "what can you help me with", "lang": "en"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert not payload["is_refusal"]
+        assert client.stub.calls == 0
+
+    def test_a_real_question_mentioning_help_still_faces_the_evidence(self, client) -> None:  # type: ignore[no-untyped-def]
+        client.post(
+            "/ask",
+            json={"question": "Kannst du mir bei der Anmeldung helfen?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        )
+        # Goes through retrieval, which finds the seeded German page.
+        assert client.stub.calls == 1

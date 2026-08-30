@@ -115,6 +115,29 @@ _THANKS_PATTERN = re.compile(
     r")(?:[\s,]+dumi)?$"
 )
 
+# Questions about the assistant itself. "Who are you" is not a question about
+# the Canton of Zug, so the evidence requirement does not apply; the honest
+# answer is the fixed self-description, which also says plainly what this is
+# and is not.
+_ABOUT_PATTERN = re.compile(
+    r"^(?:"
+    r"who are you|what are you|who is dumi|what is dumi|"
+    r"what can you (?:do|help(?: me)? with)|what do you do|"
+    r"how (?:can|do) you help(?: me)?|help(?: me)?|"
+    r"wer bist du|was bist du|wer ist dumi|was ist dumi|"
+    r"was kannst du(?: tun| alles)?|was machst du|"
+    r"wo(?:bei|mit) kannst du(?: mir)? helfen|wie kannst du(?: mir)? helfen|"
+    r"hilfe|hilf mir|"
+    r"qui es[- ]tu|qui (?:ê|e)tes[- ]vous|t'es qui|que fais[- ]tu|"
+    r"que peux[- ]tu faire|que pouvez[- ]vous faire|"
+    r"comment peux[- ]tu m'aider|comment pouvez[- ]vous m'aider|"
+    r"(?:à|a) quoi sers[- ]tu|aide(?:[- ]moi)?|"
+    r"chi sei|cosa sei|chi (?:è|e) dumi|cos(?:'|a )(?:è|e) dumi|"
+    r"cosa (?:puoi|sai) fare|come puoi aiutarmi|in cosa puoi aiutarmi|"
+    r"aiuto|aiutami"
+    r")(?:[\s,]+dumi)?$"
+)
+
 
 def small_talk_key(question: str) -> str | None:
     """Return the message key for a purely social message, or None.
@@ -129,6 +152,8 @@ def small_talk_key(question: str) -> str | None:
         return "answer.greeting"
     if _THANKS_PATTERN.fullmatch(bare):
         return "answer.thanks"
+    if _ABOUT_PATTERN.fullmatch(bare):
+        return "answer.about"
     return None
 
 

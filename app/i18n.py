@@ -178,6 +178,45 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Avec plaisir. Si vous avez une autre question, je suis là.",
         "it": "Prego. Se ha un'altra domanda, sono qui.",
     },
+    # The self-description. It says plainly what this is and is not: answers
+    # come from published official content with sources shown, and personal
+    # cases belong with the responsible office.
+    "answer.about": {
+        "de": (
+            "Ich bin Dumi, ein Assistent für Fragen zu den Dienstleistungen "
+            "des Kantons Zug. Ich antworte ausschliesslich auf Grundlage "
+            "veröffentlichter offizieller Informationen und zeige zu jeder "
+            "Antwort die Quellen. Fragen Sie mich zum Beispiel, wie Sie eine "
+            "Adresse anmelden, einen Ausweis beantragen oder Sperrgut "
+            "entsorgen. Für Auskünfte zu Ihrem persönlichen Fall wenden Sie "
+            "sich bitte an die zuständige Stelle."
+        ),
+        "en": (
+            "I am Dumi, an assistant for questions about Canton of Zug "
+            "services. I answer only from published official information and "
+            "show the sources with every answer. Ask me, for example, how to "
+            "register an address, apply for an ID, or dispose of bulky "
+            "waste. For questions about your personal case, please contact "
+            "the responsible office."
+        ),
+        "fr": (
+            "Je suis Dumi, un assistant pour les questions sur les "
+            "prestations du canton de Zoug. Je réponds uniquement sur la "
+            "base d'informations officielles publiées et j'indique mes "
+            "sources avec chaque réponse. Demandez-moi par exemple comment "
+            "annoncer votre arrivée, demander une carte d'identité ou "
+            "éliminer des déchets encombrants. Pour votre situation "
+            "personnelle, adressez-vous au service compétent."
+        ),
+        "it": (
+            "Sono Dumi, un assistente per le domande sui servizi del Canton "
+            "Zugo. Rispondo esclusivamente sulla base di informazioni "
+            "ufficiali pubblicate e mostro le fonti con ogni risposta. Mi "
+            "chieda ad esempio come notificare il domicilio, richiedere la "
+            "carta d'identità o smaltire i rifiuti ingombranti. Per il suo "
+            "caso personale si rivolga all'ufficio competente."
+        ),
+    },
     "answer.sources_inconsistent": {
         "de": (
             "Die offiziellen Quellen zu dieser Frage scheinen sich zu "
