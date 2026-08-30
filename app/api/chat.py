@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -30,7 +30,7 @@ from app.i18n import SUPPORTED_LANGUAGES, negotiate_language, normalise_language
 from app.llm.apertus import ApertusProvider
 from app.llm.base import LLMProvider
 from app.observability import get_logger
-from app.retrieval.answer import Answer, answer_question
+from app.retrieval.answer import Answer, answer_question, stream_answer
 from app.retrieval.embeddings import (
     EmbeddingProvider,
     UnavailableEmbeddings,
@@ -187,6 +187,90 @@ def get_embedding_provider() -> EmbeddingProvider:
     return provider
 
 
+def _sse(payload: dict[str, Any]) -> str:
+    """Encode one server-sent event."""
+    import json
+
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def _stream_response(
+    session: Session,
+    question: str,
+    language: str,
+    llm: LLMProvider,
+    embedder: EmbeddingProvider,
+    settings,  # type: ignore[no-untyped-def]
+) -> StreamingResponse:
+    """Answer as a token stream.
+
+    Two event types: {"type": "delta", "text": ...} while the model writes,
+    then one {"type": "final", "payload": ...} whose payload is byte-for-byte
+    what the JSON surface returns. The final text is authoritative: citation
+    validation happens only there, so the client must replace its accumulated
+    text with it. A local model on CPU takes minutes for a long answer, and a
+    stream is the difference between watching it think and staring at nothing.
+    """
+
+    async def events():  # type: ignore[no-untyped-def]
+        answer: Answer | None = None
+        try:
+            if not settings.apertus_stream:
+                # Streaming disabled by configuration: same wire format, one
+                # final event, so the client needs no second code path.
+                answer = await answer_question(
+                    session,
+                    embedder,
+                    llm,
+                    question,
+                    language=language,
+                    max_context_tokens=settings.apertus_max_context_tokens,
+                )
+                yield _sse({"type": "final", "payload": _answer_payload(answer, language)})
+                return
+
+            async for kind, item in stream_answer(
+                session,
+                embedder,
+                llm,
+                question,
+                language=language,
+                max_context_tokens=settings.apertus_max_context_tokens,
+            ):
+                if kind == "delta":
+                    yield _sse({"type": "delta", "text": item})
+                else:
+                    answer = item  # type: ignore[assignment]
+                    yield _sse({"type": "final", "payload": _answer_payload(answer, language)})
+        finally:
+            if answer is not None:
+                # The question text is never logged; section 18.
+                logger.info(
+                    "chat.answered",
+                    confidence=answer.confidence.value,
+                    citations=len(answer.citations),
+                    refusal=answer.is_refusal,
+                    language=answer.language,
+                    degraded=answer.degraded_reason or "no",
+                    streamed=True,
+                )
+            close = getattr(llm, "aclose", None)
+            if close is not None:
+                await close()
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={
+            # Proxies must not buffer a stream whose entire point is arriving
+            # a piece at a time.
+            "Cache-Control": "no-store",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+
 async def _produce_answer(
     session: Session,
     question: str,
@@ -220,9 +304,11 @@ async def ask(
     llm: LLMProvider = Depends(get_llm_provider),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
 ) -> Any:
-    """Answer a question, as HTML or JSON depending on what was asked for."""
+    """Answer a question: HTML, JSON, or a token stream, by Accept header."""
     settings = get_settings()
-    wants_json = "application/json" in (request.headers.get("Accept") or "")
+    accept = request.headers.get("Accept") or ""
+    wants_stream = "text/event-stream" in accept
+    wants_json = wants_stream or "application/json" in accept
 
     # A JSON request carries its body as JSON, not as form fields.
     if wants_json:
@@ -255,6 +341,9 @@ async def ask(
             status_code=429,
             headers={"Retry-After": str(decision.retry_after_seconds)},
         )
+
+    if wants_stream:
+        return _stream_response(session, question.strip(), language, llm, embedder, settings)
 
     answer = await _produce_answer(session, question.strip(), language, llm, embedder)
 

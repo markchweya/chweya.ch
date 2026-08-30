@@ -5,11 +5,13 @@
  * if anything is unavailable.
  *
  * What it must get right for accessibility:
- *  - The transcript is a live region, so appended text is announced. Tokens
- *    are buffered into sentences before being written, because announcing
- *    every token makes a screen reader unusable.
+ *  - The transcript is a live region, so appended text is announced. Streamed
+ *    tokens are buffered to sentence boundaries before being written, because
+ *    announcing every token makes a screen reader unusable.
  *  - There is a stop control while a response is streaming.
- *  - The Dumi mark carries status. No spinner is created anywhere.
+ *  - The Dumi mark carries status. No spinner is created anywhere, and no
+ *    answer card exists until there is answer text to put in it: an empty
+ *    bubble reads as a broken message, the mark alone reads as thinking.
  */
 (function () {
   "use strict";
@@ -52,14 +54,27 @@
     var article = document.createElement("article");
     article.className = "msg msg--bot";
     article.innerHTML = markup("thinking");
-    var body = document.createElement("div");
-    body.className = "msg__body";
-    var text = document.createElement("div");
-    text.className = "msg__text";
-    body.appendChild(text);
-    article.appendChild(body);
     transcript.appendChild(article);
-    return { article: article, body: body, text: text };
+    var shell = {
+      article: article,
+      body: null,
+      text: null,
+      // The card is created only when there is something to put in it. Until
+      // then the mark alone carries the waiting state; it is the product's
+      // one status indicator.
+      ensureBody: function () {
+        if (!shell.body) {
+          shell.body = document.createElement("div");
+          shell.body.className = "msg__body";
+          shell.text = document.createElement("div");
+          shell.text.className = "msg__text";
+          shell.body.appendChild(shell.text);
+          article.appendChild(shell.body);
+        }
+        return shell.body;
+      }
+    };
+    return shell;
   }
 
   function setState(article, state) {
@@ -147,33 +162,113 @@
 
     controller = new AbortController();
 
+    // What the stream has shown so far, and what is buffered awaiting a
+    // sentence boundary. The final payload's text replaces all of it:
+    // citation validation happens server-side only at the end, so the
+    // accumulated text is provisional by design.
+    var shown = "";
+    var pending = "";
+
+    function flushSentences(force) {
+      if (force) {
+        shown += pending;
+        pending = "";
+      } else {
+        // Greedy to the LAST sentence boundary, so one flush can carry
+        // several sentences and the live region announces prose, not tokens.
+        var match = pending.match(/^[\s\S]*[.!?:\n](?=\s|$)/);
+        if (!match) return;
+        shown += match[0];
+        pending = pending.slice(match[0].length);
+      }
+      if (shown) {
+        shell.ensureBody();
+        shell.text.textContent = shown;
+      }
+    }
+
+    function finish(payload) {
+      setState(shell.article, "idle");
+      shell.ensureBody();
+      // Authoritative: invented citation markers are stripped server-side
+      // only in this text, so it replaces whatever was streamed.
+      shell.text.textContent = payload.text || "";
+      if (payload.confidence) {
+        shell.article.setAttribute("data-confidence", payload.confidence);
+      }
+      renderCitations(shell.body, payload.citations, payload.labels || {});
+      renderNotices(shell.body, payload.notices);
+      status.textContent = "";
+    }
+
+    function handleEvent(data) {
+      var event;
+      try {
+        event = JSON.parse(data);
+      } catch (error) {
+        return;
+      }
+      if (event.type === "delta") {
+        pending += event.text;
+        flushSentences(false);
+      } else if (event.type === "final") {
+        finish(event.payload);
+      }
+    }
+
+    function readStream(response) {
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var carry = "";
+      function pump() {
+        return reader.read().then(function (step) {
+          if (step.done) return;
+          carry += decoder.decode(step.value, { stream: true });
+          var frames = carry.split("\n\n");
+          carry = frames.pop();
+          frames.forEach(function (frame) {
+            frame.split("\n").forEach(function (line) {
+              if (line.indexOf("data:") === 0) {
+                handleEvent(line.slice(5).replace(/^\s/, ""));
+              }
+            });
+          });
+          return pump();
+        });
+      }
+      return pump();
+    }
+
     fetch("/ask", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
       body: JSON.stringify({
         question: question,
         lang: form.querySelector('input[name="lang"]').value
       }),
       signal: controller.signal
     })
-      .then(function (response) { return response.json(); })
-      .then(function (payload) {
-        setState(shell.article, "idle");
-        shell.text.textContent = payload.text || "";
-        if (payload.confidence) {
-          shell.article.setAttribute("data-confidence", payload.confidence);
+      .then(function (response) {
+        var type = response.headers.get("Content-Type") || "";
+        if (type.indexOf("text/event-stream") === -1) {
+          // Not a stream: rate limiting and errors answer in JSON, and so
+          // would a deployment with streaming turned off at a proxy.
+          return response.json().then(finish);
         }
-        renderCitations(shell.body, payload.citations, payload.labels || {});
-        renderNotices(shell.body, payload.notices);
-        status.textContent = "";
+        return readStream(response);
       })
       .catch(function (error) {
         setState(shell.article, "idle");
         if (error && error.name === "AbortError") {
+          // The person stopped the answer. What has been shown stays; the
+          // buffer is flushed so the last words are not lost mid-sentence.
+          flushSentences(true);
           status.textContent = "";
           return;
         }
-        // Falls back to the message the server would have rendered.
+        // A failed or interrupted stream must not stand as a finished
+        // answer. The fixed unavailable message replaces the partial text.
+        shell.ensureBody();
         shell.text.textContent = form.dataset.unavailable || "";
         status.textContent = "";
       })

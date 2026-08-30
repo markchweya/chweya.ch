@@ -256,16 +256,53 @@ def _notices_for(assessment: EvidenceAssessment) -> list[str]:
     return notices
 
 
-async def answer_question(
+
+@dataclass
+class PreparedAnswer:
+    """Everything the generation step needs, once retrieval has run.
+
+    Split out so the streamed and unstreamed paths share every safety check:
+    the social replies, the evidence requirement, the prompt construction and
+    the citation validation are one code path with two delivery modes.
+    """
+
+    prompt: BuiltPrompt
+    assessment: EvidenceAssessment
+    answer_language: str
+    degraded_reason: str
+
+
+def _unavailable(answer_language: str, exc: LLMError) -> Answer:
+    """The honest response when the model cannot answer.
+
+    Fail closed. An unavailable model produces a fixed message, never an
+    answer from model memory or a cached guess.
+    """
+    logger.warning("answer.model_unavailable", error=type(exc).__name__)
+    return Answer(
+        text=t("answer.unavailable", answer_language),
+        language=answer_language,
+        confidence=Confidence.INSUFFICIENT,
+        is_refusal=True,
+        degraded_reason=f"model_unavailable_{type(exc).__name__}",
+    )
+
+
+def prepare_answer(
     session: Session,
     embedder: EmbeddingProvider,
-    llm: LLMProvider,
     question: str,
     *,
     language: str | None = None,
     max_context_tokens: int = 8192,
-) -> Answer:
-    """Answer one question, or explain honestly why it cannot be answered."""
+    estimate_tokens=None,  # type: ignore[no-untyped-def]
+) -> Answer | PreparedAnswer:
+    """Run everything that happens before the model: validation, social
+    replies, retrieval, the confidence policy and prompt assembly.
+
+    Returns a finished :class:`Answer` when no generation should happen, or a
+    :class:`PreparedAnswer` when it should.
+    """
     question = question.strip()
     answer_language = normalise_language(language) if language else detect_language(question)
 
@@ -332,24 +369,28 @@ async def answer_question(
         assessment,
         answer_language=answer_language,
         max_context_tokens=max_context_tokens,
-        estimate_tokens=llm.estimate_tokens,
+        estimate_tokens=estimate_tokens,
+    )
+    return PreparedAnswer(
+        prompt=prompt,
+        assessment=assessment,
+        answer_language=answer_language,
+        degraded_reason=result.degraded_reason,
     )
 
-    try:
-        generated = await llm.generate(prompt.request)
-    except LLMError as exc:
-        # Fail closed. An unavailable model produces an honest message, never
-        # an answer from model memory or a cached guess.
-        logger.warning("answer.model_unavailable", error=type(exc).__name__)
-        return Answer(
-            text=t("answer.unavailable", answer_language),
-            language=answer_language,
-            confidence=Confidence.INSUFFICIENT,
-            is_refusal=True,
-            degraded_reason=f"model_unavailable_{type(exc).__name__}",
-        )
 
-    cleaned, kept, invented = validate_citations(generated.text, len(prompt.cited_chunks))
+def finalise_answer(text: str, was_truncated: bool, prepared: PreparedAnswer) -> Answer:
+    """Validate a generated response and shape it into an answer.
+
+    Identical for streamed and unstreamed generation: the text is checked
+    against the passages that were actually supplied, invented citation
+    markers are stripped, and a response that cited nothing is refused.
+    """
+    prompt = prepared.prompt
+    assessment = prepared.assessment
+    answer_language = prepared.answer_language
+
+    cleaned, kept, invented = validate_citations(text, len(prompt.cited_chunks))
 
     if invented:
         logger.warning(
@@ -377,7 +418,7 @@ async def answer_question(
     # Show only the sources the answer actually used.
     used = [citation for citation in all_citations if citation.number in kept]
 
-    if generated.was_truncated:
+    if was_truncated:
         # A cut-off list of requirements reads as an exhaustive one.
         cleaned += "\n\n" + t("answer.qualified", answer_language)
 
@@ -389,5 +430,85 @@ async def answer_question(
         risk_topics=assessment.risk_topics,
         reasons=assessment.reasons,
         notices=_notices_for(assessment),
-        degraded_reason=result.degraded_reason,
+        degraded_reason=prepared.degraded_reason,
     )
+
+
+async def answer_question(
+    session: Session,
+    embedder: EmbeddingProvider,
+    llm: LLMProvider,
+    question: str,
+    *,
+    language: str | None = None,
+    max_context_tokens: int = 8192,
+) -> Answer:
+    """Answer one question, or explain honestly why it cannot be answered."""
+    prepared = prepare_answer(
+        session,
+        embedder,
+        question,
+        language=language,
+        max_context_tokens=max_context_tokens,
+        estimate_tokens=llm.estimate_tokens,
+    )
+    if isinstance(prepared, Answer):
+        return prepared
+
+    try:
+        generated = await llm.generate(prepared.prompt.request)
+    except LLMError as exc:
+        return _unavailable(prepared.answer_language, exc)
+
+    return finalise_answer(generated.text, generated.was_truncated, prepared)
+
+
+async def stream_answer(
+    session: Session,
+    embedder: EmbeddingProvider,
+    llm: LLMProvider,
+    question: str,
+    *,
+    language: str | None = None,
+    max_context_tokens: int = 8192,
+):  # type: ignore[no-untyped-def]  # AsyncIterator[tuple[str, str | Answer]]
+    """Answer one question incrementally.
+
+    Yields ("delta", text) while the model writes, then exactly one
+    ("answer", Answer) carrying the validated final response. The final
+    answer's text is authoritative: citation markers the model invented are
+    stripped only there, so the interface must replace the streamed text with
+    it rather than keep what it accumulated.
+
+    A stream that fails midway ends with the unavailable answer, never with
+    the partial text standing as if finished.
+    """
+    prepared = prepare_answer(
+        session,
+        embedder,
+        question,
+        language=language,
+        max_context_tokens=max_context_tokens,
+        estimate_tokens=llm.estimate_tokens,
+    )
+    if isinstance(prepared, Answer):
+        yield ("answer", prepared)
+        return
+
+    accumulated: list[str] = []
+    try:
+        async for chunk in llm.stream(prepared.prompt.request):
+            if chunk.done:
+                break
+            if chunk.text:
+                accumulated.append(chunk.text)
+                yield ("delta", chunk.text)
+    except LLMError as exc:
+        yield ("answer", _unavailable(prepared.answer_language, exc))
+        return
+
+    # The wire protocol does not carry a finish reason for streams, so
+    # truncation cannot be detected here; the output-token limit is the
+    # provider's to enforce and the qualification note is only added on the
+    # unstreamed path.
+    yield ("answer", finalise_answer("".join(accumulated), False, prepared))

@@ -21,7 +21,7 @@ from app.db.models import Source
 from app.db.session import db_session
 from app.ingest.crawler import Crawler
 from app.ingest.fetcher import GuardedFetcher
-from app.llm.base import GenerationResult, LLMUnavailable
+from app.llm.base import GenerationChunk, GenerationResult, LLMUnavailable
 from app.main import create_app
 from app.retrieval.embeddings import HashingProvider
 from app.retrieval.indexer import embed_pending_chunks, update_search_vectors
@@ -95,7 +95,19 @@ class StubLLM:
         )
 
     def stream(self, request):  # type: ignore[no-untyped-def]
-        raise NotImplementedError
+        stub = self
+
+        async def generator():  # type: ignore[no-untyped-def]
+            stub.calls += 1
+            if stub.fail:
+                raise LLMUnavailable("stub is unavailable")
+            # Word by word, the way a real model arrives.
+            words = stub.text.split(" ")
+            for index, word in enumerate(words):
+                yield GenerationChunk(text=word if index == 0 else " " + word)
+            yield GenerationChunk(text="", done=True)
+
+        return generator()
 
     async def health(self):  # type: ignore[no-untyped-def]
         raise NotImplementedError
@@ -553,3 +565,67 @@ class TestSmallTalk:
         )
         # Goes through retrieval, which finds the seeded German page.
         assert client.stub.calls == 1
+
+
+def read_sse(client, question: str, *, lang: str = "de") -> list[dict]:  # type: ignore[no-untyped-def]
+    """POST with a stream Accept header and return the decoded events."""
+    import json as jsonlib
+
+    events: list[dict] = []
+    with client.stream(
+        "POST",
+        "/ask",
+        json={"question": question, "lang": lang},
+        headers={"Accept": "text/event-stream"},
+    ) as response:
+        assert response.headers["content-type"].startswith("text/event-stream")
+        buffer = ""
+        for text in response.iter_text():
+            buffer += text
+        for line in buffer.splitlines():
+            if line.startswith("data:"):
+                events.append(jsonlib.loads(line[5:].strip()))
+    return events
+
+
+class TestStreaming:
+    """The streamed surface must be the JSON surface, delivered a piece at
+    a time. Same validation, same payload, no separate code path a check
+    could quietly miss."""
+
+    def test_deltas_arrive_then_a_validated_final(self, client) -> None:  # type: ignore[no-untyped-def]
+        events = read_sse(client, "Was kostet die Anmeldung?")
+        kinds = [event["type"] for event in events]
+
+        assert "delta" in kinds, "the model's words must arrive incrementally"
+        assert kinds[-1] == "final"
+        streamed = "".join(e["text"] for e in events if e["type"] == "delta")
+        assert "CHF 20.--" in streamed
+
+        payload = events[-1]["payload"]
+        assert payload["citations"], "the final event carries the validated citations"
+        assert "CHF 20.--" in payload["text"]
+        assert not payload["is_refusal"]
+
+    def test_a_failed_stream_ends_with_the_unavailable_answer(self, client) -> None:  # type: ignore[no-untyped-def]
+        """A stream that dies must not leave partial text standing as an
+        answer; the final event carries the honest refusal."""
+        client.stub.fail = True
+        events = read_sse(client, "Was kostet die Anmeldung?")
+
+        assert [event["type"] for event in events] == ["final"]
+        payload = events[0]["payload"]
+        assert payload["is_refusal"]
+        assert payload["confidence"] == "insufficient"
+
+    def test_a_social_message_streams_one_final_event(self, client) -> None:  # type: ignore[no-untyped-def]
+        events = read_sse(client, "heyyy", lang="en")
+        assert [event["type"] for event in events] == ["final"]
+        assert "Dumi" in events[0]["payload"]["text"]
+        assert client.stub.calls == 0
+
+    def test_insufficient_evidence_streams_the_refusal(self, client) -> None:  # type: ignore[no-untyped-def]
+        events = read_sse(client, "Wie funktioniert die Quantenphysik?")
+        assert [event["type"] for event in events] == ["final"]
+        assert events[0]["payload"]["is_refusal"]
+        assert client.stub.calls == 0
