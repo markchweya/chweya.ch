@@ -268,6 +268,14 @@ def extract_html(html: str, *, url: str | None = None) -> ExtractedPage:
             )
         )
 
+    # A page with no title element still needs a citation label, and its own
+    # h1 is the best available one. An untitled citation gives a resident a
+    # bare URL to judge, which defeats the point of citing at all.
+    if not page.title:
+        first_heading = next((b for b in page.blocks if b.tag == "h1"), None)
+        if first_heading is not None:
+            page.title = first_heading.text
+
     if not page.is_usable:
         page.quality_note = "insufficient_text"
 

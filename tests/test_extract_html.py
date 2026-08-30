@@ -125,6 +125,14 @@ class TestMetadata:
     def test_publication_date_text_is_captured(self) -> None:
         assert extract_html(PAGE).published_at_text == "2026-01-15"
 
+    def test_h1_is_used_when_the_page_has_no_title_element(self) -> None:
+        """An untitled citation gives a resident a bare URL to judge."""
+        html = "<html><body><main><h1>Bulky waste collection</h1>" + (
+            "<p>Collections take place on the first Monday of each month in "
+            "every municipality of the canton.</p>"
+        ) + "</main></body></html>"
+        assert extract_html(html).title == "Bulky waste collection"
+
 
 class TestQuality:
     def test_a_thin_page_is_flagged_rather_than_indexed(self) -> None:
