@@ -176,7 +176,12 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------- crawler
     # Hostnames the crawler is permitted to contact. Anything not on this list
     # is refused before a socket is opened. See app/ingest/allowlist.py.
-    crawler_allowed_hosts: str = "www.zug.ch,zug.ch"
+    #
+    # Both portals are included because the names are easily confused:
+    # zg.ch is the Canton of Zug, zug.ch is the City of Zug. Residents ask
+    # about both levels of government, and the cantonal content lives on
+    # zg.ch.
+    crawler_allowed_hosts: str = "www.zug.ch,zug.ch,www.zg.ch,zg.ch"
     crawler_user_agent: str = "DumiBot/0.1 (unofficial prototype; +{contact})"
     # Required. A crawler that does not say who to contact should not run.
     crawler_contact: str = ""

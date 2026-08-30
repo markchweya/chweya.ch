@@ -2,7 +2,9 @@
 
 ## The allowlist
 
-`CRAWLER_ALLOWED_HOSTS`, currently `www.zug.ch,zug.ch`.
+`CRAWLER_ALLOWED_HOSTS`, currently `www.zug.ch,zug.ch,www.zg.ch,zg.ch`.
+zg.ch is the Canton of Zug, zug.ch is the City of Zug; the cantonal
+content lives on zg.ch.
 
 Matching is on label boundaries, so `zug.ch` admits `zug.ch` and
 `steuern.zug.ch` and refuses `evil-zug.ch` and `zug.ch.attacker.example`. A

@@ -9,8 +9,10 @@ Canton of Zug.
 ## Scope
 
 Public informational pages under the configured hostnames, currently
-`www.zug.ch` and `zug.ch`. Widening the list is a policy decision, not a
-configuration change, and it is audited.
+`www.zg.ch`, `zg.ch`, `www.zug.ch` and `zug.ch`. The two names are easily
+confused: zg.ch is the Canton of Zug, zug.ch is the City of Zug, and the
+cantonal content lives on zg.ch. Widening the list is a policy decision, not
+a configuration change, and it is audited.
 
 "Crawl almost everything" means public, useful, informational content that is
 legally and technically accessible. It does not mean ignoring exclusions,
