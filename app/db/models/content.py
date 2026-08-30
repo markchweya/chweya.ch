@@ -150,15 +150,21 @@ class Source(Base, TimestampMixin):
     # every write; a value here is never trusted at crawl time.
     base_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     # Path prefixes under base_url that are excluded, one per line.
-    excluded_paths: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    excluded_paths: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
 
     # Higher runs first when a run is bounded by CRAWLER_MAX_PAGES_PER_RUN.
-    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
-    is_paused: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    priority: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=100, server_default="100"
+    )
+    is_paused: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
     # Expected primary language, used as a fallback when detection is
     # inconclusive on a short page.
-    default_language: Mapped[str] = mapped_column(String(5), nullable=False, default="de")
+    default_language: Mapped[str] = mapped_column(
+        String(5), nullable=False, default="de", server_default="de"
+    )
 
     # Which office publishes this area, when it can be determined. Shown beside
     # citations so a resident knows who to contact.
@@ -211,8 +217,12 @@ class CrawledUrl(Base, TimestampMixin):
     last_status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Empty when the last fetch succeeded. Otherwise the machine-readable
     # refusal reason, so blocked attempts can be counted by cause.
-    last_failure_reason: Mapped[str] = mapped_column(String(64), nullable=False, default="")
-    consecutive_failures: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_failure_reason: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="", server_default=""
+    )
+    consecutive_failures: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
     # Conditional request state, so an unchanged page costs one round trip and
     # no body.
@@ -231,8 +241,10 @@ class CrawledUrl(Base, TimestampMixin):
     )
 
     # Excluded by an administrator, independently of robots.txt.
-    is_excluded: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    exclusion_reason: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    is_excluded: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    exclusion_reason: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
 
     __table_args__ = (
         UniqueConstraint("url", name="uq_crawled_urls_url"),
@@ -257,13 +269,18 @@ class Document(Base, TimestampMixin):
 
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
-    title: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    media_type: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    title: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    media_type: Mapped[str] = mapped_column(
+        String(128), nullable=False, default="", server_default=""
+    )
     language: Mapped[str] = mapped_column(String(5), nullable=False, default="de")
 
     # Set by an administrator for uploads; official for crawled canton pages.
     publication_state: Mapped[str] = mapped_column(
-        String(32), nullable=False, default=PublicationState.OFFICIAL.value
+        String(32),
+        nullable=False,
+        default=PublicationState.OFFICIAL.value,
+        server_default=PublicationState.OFFICIAL.value,
     )
 
     # Navigation path on the canton site, stored as an ordered JSON array.
@@ -329,16 +346,22 @@ class DocumentVersion(Base, TimestampMixin):
 
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default=ContentStatus.PENDING.value
+        String(32),
+        nullable=False,
+        default=ContentStatus.PENDING.value,
+        server_default=ContentStatus.PENDING.value,
     )
 
     # The cleaned text used for chunking and retrieval. Kept so an extraction
     # change can be re-run without re-fetching the whole site.
-    extracted_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    extracted_text: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     extraction_quality: Mapped[str] = mapped_column(
-        String(16), nullable=False, default=ExtractionQuality.GOOD.value
+        String(16),
+        nullable=False,
+        default=ExtractionQuality.GOOD.value,
+        server_default=ExtractionQuality.GOOD.value,
     )
-    extraction_notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    extraction_notes: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
 
     # Where the original bytes live, for PDFs and uploads. A server-generated
     # random name, never anything derived from the uploaded filename.
@@ -368,7 +391,7 @@ class DocumentVersion(Base, TimestampMixin):
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     reviewed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    review_note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    review_note: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
 
     document: Mapped[Document] = relationship(
         back_populates="versions", foreign_keys=[document_id]
@@ -413,7 +436,9 @@ class Chunk(Base, TimestampMixin):
     # an answer needs more context than one passage carries.
     ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
-    token_estimate: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    token_estimate: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     language: Mapped[str] = mapped_column(String(5), nullable=False, default="de")
 
     # --- citation anchors --------------------------------------------------
@@ -476,13 +501,18 @@ class CrawlRun(Base, TimestampMixin):
     )
 
     state: Mapped[str] = mapped_column(
-        String(16), nullable=False, default=CrawlRunState.QUEUED.value
+        String(16),
+        nullable=False,
+        default=CrawlRunState.QUEUED.value,
+        server_default=CrawlRunState.QUEUED.value,
     )
     # Whether a person started this or the scheduler did.
     triggered_by_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    is_scheduled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_scheduled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
     started_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -498,7 +528,7 @@ class CrawlRun(Base, TimestampMixin):
     # Counts of refusals by reason, so the dashboard can show why URLs were
     # skipped without storing every skipped URL.
     blocked_reasons: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
-    error_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    error_summary: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
 
     __table_args__ = (
         Index("ix_crawl_runs_source_id", "source_id"),

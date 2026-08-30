@@ -19,6 +19,7 @@ from app.db.models.content import (
     Source,
     SourceKind,
 )
+from app.db.models.review import ContradictionFinding, ContradictionKind, ReviewState
 from app.db.models.system import SettingKey, SystemSetting, get_setting, set_setting
 from app.db.models.user import ROLE_DESCRIPTIONS, Role, RoleName, User, UserRole, UserSession
 
@@ -30,6 +31,8 @@ __all__ = [
     "AuditOutcome",
     "Chunk",
     "ContentStatus",
+    "ContradictionFinding",
+    "ContradictionKind",
     "CrawlRun",
     "CrawlRunState",
     "CrawledUrl",
@@ -37,6 +40,7 @@ __all__ = [
     "DocumentVersion",
     "ExtractionQuality",
     "PublicationState",
+    "ReviewState",
     "Role",
     "RoleName",
     "SettingKey",

@@ -124,6 +124,9 @@ ignore = [
 # The injection patterns themselves match on lookalike and invisible
 # characters, so the same applies to the module under test.
 "app/ingest/injection.py" = ["RUF001", "RUF002", "RUF003"]
+# Swiss number formatting uses both the straight and the typographic
+# apostrophe as a thousands separator, so the money pattern has to match both.
+"app/ingest/contradictions.py" = ["RUF001"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
