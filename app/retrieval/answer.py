@@ -176,8 +176,11 @@ def _notices_for(assessment: EvidenceAssessment) -> list[str]:
         notices.append("answer.emergency")
     if assessment.risk_topics:
         notices.append("answer.high_risk")
-    if assessment.confidence in (Confidence.MEDIUM, Confidence.LOW):
-        notices.append("answer.qualified")
+    # Medium and low confidence used to add a "confirm this with the cited
+    # office" banner above every such answer. Removed: the sources block
+    # carries the links to check against, the confidence still reaches the
+    # interface as data, and a caution stapled to most answers teaches people
+    # to read none of them. Emergency and high-risk notices stay.
     return notices
 
 
