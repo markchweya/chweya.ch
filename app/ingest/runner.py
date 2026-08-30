@@ -114,8 +114,16 @@ async def _run_crawl(source_id: uuid.UUID, triggered_by_id: uuid.UUID | None) ->
             from app.api.chat import get_embedding_provider
 
             provider = get_embedding_provider()
-            embedded = await asyncio.to_thread(embed_pending_chunks, session, provider)
-            session.commit()
+            # embed_pending_chunks works in bounded batches so one call cannot
+            # hold memory for a whole site. Loop until it drains, committing
+            # per batch, or a large crawl leaves its tail keyword-only: a 169
+            # page run produced 583 chunks and a single batch stopped at 500.
+            while True:
+                batch = await asyncio.to_thread(embed_pending_chunks, session, provider)
+                session.commit()
+                embedded += batch
+                if batch == 0:
+                    break
         except Exception as exc:  # noqa: BLE001 - embeddings are best-effort here
             session.rollback()
             logger.warning("crawl.embedding_skipped", error=type(exc).__name__)
