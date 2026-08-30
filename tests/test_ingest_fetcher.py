@@ -26,7 +26,11 @@ def make_settings(**overrides: object) -> Settings:
         "crawler_max_response_bytes": 4096,
     }
     base.update(overrides)
-    return Settings(**base)  # type: ignore[arg-type]
+    # _env_file=None so this does not inherit the developer's .env.
+    # Without it a test's outcome depends on an untracked local file:
+    # the production-refusal test passed or failed depending on whether
+    # BOOTSTRAP_ADMIN_PASSWORD happened to be set on that machine.
+    return Settings(_env_file=None, **base)  # type: ignore[arg-type]
 
 
 def public_resolver(host, port, *args, **kwargs):  # type: ignore[no-untyped-def]

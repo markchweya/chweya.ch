@@ -44,7 +44,11 @@ def production_settings(**overrides: object) -> Settings:
         "bootstrap_admin_password": None,
     }
     base.update(overrides)
-    return Settings(**base)  # type: ignore[arg-type]
+    # _env_file=None so this does not inherit the developer's .env.
+    # Without it a test's outcome depends on an untracked local file:
+    # the production-refusal test passed or failed depending on whether
+    # BOOTSTRAP_ADMIN_PASSWORD happened to be set on that machine.
+    return Settings(_env_file=None, **base)  # type: ignore[arg-type]
 
 
 class TestKnownUnsafeCredentials:
@@ -147,6 +151,7 @@ class TestDevelopmentIsPermissive:
 
     def test_development_accepts_the_supplied_bootstrap_values(self) -> None:
         settings = Settings(  # type: ignore[call-arg]
+            _env_file=None,
             environment=Environment.DEVELOPMENT,
             secret_key="dev-secret",
             database_url=f"postgresql+psycopg://dumi:{DEV_DB_PASSWORD}@localhost:5432/dumi",
