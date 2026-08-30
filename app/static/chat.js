@@ -26,6 +26,21 @@
 
   var controller = null;
 
+  // The same Markdown-marker removal the server applies to the final text,
+  // so the provisional streamed text does not show literal asterisks for the
+  // minutes a slow model takes. Only markers are removed, never words, and
+  // the text is still written with textContent: this is not rendering
+  // Markdown, it is refusing to display its punctuation.
+  function plain(text) {
+    return text
+      .replace(/^#{1,6}[ \t]+/gm, "")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/__([^_]+)__/g, "$1")
+      .replace(/^[ \t]*\*[ \t]+/gm, "- ")
+      .replace(/`+/g, "")
+      .replace(/\*\*/g, "");
+  }
+
   function markup(state) {
     return (
       '<span class="dumi" data-state="' + state + '" aria-hidden="true">' +
@@ -183,7 +198,7 @@
       }
       if (shown) {
         shell.ensureBody();
-        shell.text.textContent = shown;
+        shell.text.textContent = plain(shown);
       }
     }
 

@@ -39,6 +39,17 @@ logger = get_logger(__name__)
 # Matches the bracketed citation markers the system prompt asks for.
 CITATION_PATTERN = re.compile(r"\[(\d{1,2})\]")
 
+# Markdown markers a model emits despite being told to write plain text. The
+# interface renders answers as text, which is right for content a model wrote,
+# so **bold** would reach a resident as literal asterisks. Only the markers
+# are removed; every word stays exactly as generated.
+_MD_HEADING = re.compile(r"^#{1,6}[ \t]+", re.MULTILINE)
+_MD_BOLD = re.compile(r"\*\*([^*]+)\*\*")
+_MD_BOLD_UNDERSCORE = re.compile(r"__([^_]+)__")
+_MD_BULLET = re.compile(r"^[ \t]*\*[ \t]+", re.MULTILINE)
+_MD_EMPHASIS = re.compile(r"(?<![\w*])\*([^\s*][^*\n]*?)\*(?![\w*])")
+_MD_CODE = re.compile(r"`+")
+
 MAX_QUESTION_CHARACTERS = 1000
 
 
@@ -205,6 +216,22 @@ def _build_citations(prompt: BuiltPrompt, answer_language: str) -> list[Citation
             )
         )
     return citations
+
+
+def strip_markup(text: str) -> str:
+    """Remove Markdown formatting markers from a generated answer.
+
+    The prompt forbids them; this handles the ones that arrive anyway.
+    Bullet asterisks become plain hyphens so a list stays a list. Leftover
+    unpaired double asterisks are dropped rather than shown.
+    """
+    text = _MD_HEADING.sub("", text)
+    text = _MD_BOLD.sub(r"\1", text)
+    text = _MD_BOLD_UNDERSCORE.sub(r"\1", text)
+    text = _MD_BULLET.sub("- ", text)
+    text = _MD_EMPHASIS.sub(r"\1", text)
+    text = _MD_CODE.sub("", text)
+    return text.replace("**", "")
 
 
 def validate_citations(text: str, available: int) -> tuple[str, list[int], list[int]]:
@@ -390,7 +417,9 @@ def finalise_answer(text: str, was_truncated: bool, prepared: PreparedAnswer) ->
     assessment = prepared.assessment
     answer_language = prepared.answer_language
 
-    cleaned, kept, invented = validate_citations(text, len(prompt.cited_chunks))
+    cleaned, kept, invented = validate_citations(
+        strip_markup(text), len(prompt.cited_chunks)
+    )
 
     if invented:
         logger.warning(
@@ -399,22 +428,25 @@ def finalise_answer(text: str, was_truncated: bool, prepared: PreparedAnswer) ->
             supplied=len(prompt.cited_chunks),
         )
 
+    all_citations = _build_citations(prompt, answer_language)
+
     if not kept:
-        # The model answered without citing anything. The system prompt
-        # required citations and the evidence was there, so this response
-        # cannot be shown as sourced.
+        # The model answered without citing anything, so its text cannot be
+        # shown as sourced and is withheld. What replaces it must be honest:
+        # evidence was found, the failure is in tying the answer to it. The
+        # message says exactly that, and the retrieved pages are listed so the
+        # person can read them directly instead of being told nothing exists.
         logger.warning("answer.no_citations_produced")
         return Answer(
-            text=t("answer.insufficient_evidence", answer_language),
+            text=t("answer.uncited", answer_language),
             language=answer_language,
             confidence=Confidence.INSUFFICIENT,
+            citations=all_citations,
             risk_topics=assessment.risk_topics,
             reasons=(*assessment.reasons, "model_answered_without_citations"),
             notices=_notices_for(assessment),
             is_refusal=True,
         )
-
-    all_citations = _build_citations(prompt, answer_language)
     # Show only the sources the answer actually used.
     used = [citation for citation in all_citations if citation.number in kept]
 

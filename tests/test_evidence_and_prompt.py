@@ -12,7 +12,7 @@ import uuid
 
 import pytest
 
-from app.retrieval.answer import validate_citations
+from app.retrieval.answer import strip_markup, validate_citations
 from app.retrieval.evidence import (
     Confidence,
     RiskTopic,
@@ -261,6 +261,17 @@ class TestPromptConstruction:
         system = build_prompt("Was kostet das?", outcome).request.messages[0].content
         assert "cite" in system.lower()
 
+    def test_the_prompt_forbids_markdown_and_repeats_it_after_the_question(self) -> None:
+        """The interface renders plain text, so the model must write plain
+        text. The reminder after the question exists because a small model
+        follows the end of the prompt more reliably than the middle."""
+        outcome = assess(found(chunk(), chunk(title="B")), "Was kostet das?", now=NOW)
+        built = build_prompt("Was kostet das?", outcome)
+        assert "Markdown" in built.request.messages[0].content
+        user = built.request.messages[1].content
+        assert user.rstrip().endswith("Markdown symbols.")
+        assert "bracketed passage number" in user
+
     def test_the_system_message_refuses_to_accept_user_claims_as_fact(self) -> None:
         outcome = assess(found(chunk(), chunk(title="B")), "Was kostet das?", now=NOW)
         system = build_prompt("Was kostet das?", outcome).request.messages[0].content
@@ -339,3 +350,41 @@ class TestCitationValidation:
     def test_an_answer_with_no_citations_is_detected(self) -> None:
         _, kept, _ = validate_citations("The fee is twenty francs.", 3)
         assert kept == []
+
+
+class TestMarkupStripping:
+    """The interface renders answers as plain text, which is the safe way to
+    show model output. So Markdown markers the model emits anyway must be
+    removed before display, or a resident reads literal asterisks."""
+
+    def test_bold_markers_are_removed_and_words_kept(self) -> None:
+        assert strip_markup("Check the **official website** first.") == (
+            "Check the official website first."
+        )
+
+    def test_headings_lose_their_hashes(self) -> None:
+        assert strip_markup("## Anmeldung\nBringen Sie die ID mit.") == (
+            "Anmeldung\nBringen Sie die ID mit."
+        )
+
+    def test_bullet_asterisks_become_hyphens(self) -> None:
+        assert strip_markup("* Identitätskarte\n* Mietvertrag") == (
+            "- Identitätskarte\n- Mietvertrag"
+        )
+
+    def test_inline_code_backticks_are_removed(self) -> None:
+        assert strip_markup("Use the form `A1` at the counter.") == (
+            "Use the form A1 at the counter."
+        )
+
+    def test_citation_markers_are_untouched(self) -> None:
+        assert strip_markup("**Die Gebühr** beträgt CHF 20 [1].") == (
+            "Die Gebühr beträgt CHF 20 [1]."
+        )
+
+    def test_an_unpaired_double_asterisk_is_dropped(self) -> None:
+        assert "**" not in strip_markup("Die Frist beträgt **14 Tage.")
+
+    def test_plain_numbered_steps_pass_through_unchanged(self) -> None:
+        text = "1. Formular ausfüllen.\n2. Am Schalter abgeben."
+        assert strip_markup(text) == text

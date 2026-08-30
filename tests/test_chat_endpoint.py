@@ -289,8 +289,11 @@ class TestAnswering:
         assert payload["is_refusal"]
         assert "nicht erreichbar" in payload["text"]
 
-    def test_an_answer_with_no_citations_is_replaced(self, client) -> None:  # type: ignore[no-untyped-def]
-        """The prompt required citations and evidence was supplied."""
+    def test_an_answer_with_no_citations_is_withheld_and_the_sources_offered(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The prompt required citations and evidence was supplied, so the
+        uncited text is withheld. What replaces it must be honest: pages were
+        found, so the message must not claim nothing exists, and it lists the
+        retrieved pages so the person can read them directly."""
         client.stub.text = "Die Anmeldung kostet zwanzig Franken."
         payload = client.post(
             "/ask",
@@ -298,7 +301,28 @@ class TestAnswering:
             headers={"Accept": "application/json"},
         ).json()
         assert payload["is_refusal"]
-        assert payload["citations"] == []
+        assert "zwanzig Franken" not in payload["text"]
+        assert "keine gesicherten Angaben" not in payload["text"]
+        assert payload["citations"], "the retrieved pages are offered as links"
+        assert payload["citations"][0]["url"].startswith("https://www.zug.ch/")
+
+    def test_markdown_markers_are_stripped_from_the_answer(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The interface renders plain text, so **bold** would reach a
+        resident as literal asterisks."""
+        client.stub.text = (
+            "## Anmeldung\n**Die Anmeldung** kostet CHF 20 [1].\n"
+            "* Identitätskarte mitbringen [1]."
+        )
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert not payload["is_refusal"]
+        assert "**" not in payload["text"]
+        assert "##" not in payload["text"]
+        assert "Die Anmeldung kostet CHF 20 [1]." in payload["text"]
+        assert "- Identitätskarte mitbringen [1]." in payload["text"]
 
     def test_invented_citations_are_stripped(self, client) -> None:  # type: ignore[no-untyped-def]
         client.stub.text = "Die Anmeldung kostet CHF 20 [1]. Die Frist betraegt 30 Tage [9]."
@@ -629,3 +653,24 @@ class TestStreaming:
         assert [event["type"] for event in events] == ["final"]
         assert events[0]["payload"]["is_refusal"]
         assert client.stub.calls == 0
+
+    def test_an_uncited_stream_ends_with_the_sources_not_a_nothing_found_claim(self, client) -> None:  # type: ignore[no-untyped-def]
+        """A model that streams a whole answer and cites nothing has its text
+        withheld by the final event. The replacement must say what actually
+        happened: pages were found and are listed, the answer could not be
+        tied to them."""
+        client.stub.text = "Die Anmeldung kostet zwanzig Franken."
+        events = read_sse(client, "Was kostet die Anmeldung?")
+
+        kinds = [event["type"] for event in events]
+        assert "delta" in kinds, "the uncited text still streamed first"
+        payload = events[-1]["payload"]
+        assert payload["is_refusal"]
+        assert "keine gesicherten Angaben" not in payload["text"]
+        assert payload["citations"], "the final event offers the retrieved pages"
+
+    def test_the_final_event_carries_the_markdown_stripped_text(self, client) -> None:  # type: ignore[no-untyped-def]
+        client.stub.text = "**Die Anmeldung** kostet CHF 20 [1]."
+        events = read_sse(client, "Was kostet die Anmeldung?")
+        payload = events[-1]["payload"]
+        assert payload["text"] == "Die Anmeldung kostet CHF 20 [1]."

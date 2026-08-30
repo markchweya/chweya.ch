@@ -78,6 +78,31 @@ STRINGS: dict[str, dict[str, str]] = {
             "competente o di cercare direttamente su zug.ch."
         ),
     },
+    "answer.uncited": {
+        "de": (
+            "Ich habe passende offizielle Seiten gefunden, konnte meine Antwort "
+            "aber nicht zuverlässig mit ihnen belegen. Deshalb zeige ich sie "
+            "nicht an. Die Quellen unten führen direkt zu den Seiten, die Ihre "
+            "Frage behandeln."
+        ),
+        "en": (
+            "I found relevant official pages, but I could not reliably tie my "
+            "answer to them, so I am not showing it. The sources below lead "
+            "directly to the pages that cover your question."
+        ),
+        "fr": (
+            "J'ai trouvé des pages officielles pertinentes, mais je n'ai pas pu "
+            "relier ma réponse à ces pages de manière fiable, donc je ne "
+            "l'affiche pas. Les sources ci-dessous mènent directement aux pages "
+            "qui traitent de votre question."
+        ),
+        "it": (
+            "Ho trovato pagine ufficiali pertinenti, ma non sono riuscito a "
+            "collegare la mia risposta a queste pagine in modo affidabile, "
+            "quindi non la mostro. Le fonti qui sotto portano direttamente alle "
+            "pagine che trattano la sua domanda."
+        ),
+    },
     "answer.unavailable": {
         "de": (
             "Der Assistent ist im Moment nicht erreichbar. Bitte versuchen Sie es "
