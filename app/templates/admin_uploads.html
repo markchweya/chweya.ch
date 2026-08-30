@@ -1,0 +1,90 @@
+{# The upload list and the form for a new one.
+
+   The state column carries a word rather than a colour, so somebody who
+   cannot distinguish red from green still reads the same page. There is no
+   progress bar and no spinner: the browser reports the transfer itself, and
+   the Dumi mark is the only status indicator this product has. #}
+{% extends "base.html" %}
+{% block title %}Documents · Dumi{% endblock %}
+{% block body %}
+<header class="bar">
+  <span class="dumi-lockup">
+    {% include "_mark.html" %} Dumi
+    <span class="dumi-lockup__tag">{{ t('admin.title') }}</span>
+  </span>
+  <a href="/admin">{{ t('admin.title') }}</a>
+</header>
+
+<main id="main" class="admin">
+  <h1>Documents</h1>
+
+  {% if message %}
+    <p class="auth__error" role="status">{{ message }}</p>
+  {% endif %}
+
+  <section aria-labelledby="new-upload">
+    <h2 id="new-upload">Upload a document</h2>
+    <p>
+      PDF, DOCX, TXT, Markdown, CSV and HTML, up to {{ max_megabytes }} MB.
+      An uploaded document is checked, indexed and held back until somebody
+      approves it. Nothing you upload here can answer a question before that.
+    </p>
+    <form class="auth__form" method="post" action="/admin/uploads"
+          enctype="multipart/form-data">
+      <label for="file">File</label>
+      <input type="file" id="file" name="file" required
+             accept=".pdf,.docx,.txt,.md,.markdown,.csv,.html,.htm">
+
+      <label for="language">Language of the document</label>
+      <select id="language" name="language">
+        {% for code in languages %}
+          <option value="{{ code }}"{% if code == 'de' %} selected{% endif %}>{{ code | upper }}</option>
+        {% endfor %}
+      </select>
+
+      <button type="submit" class="send">Upload</button>
+    </form>
+  </section>
+
+  <section aria-labelledby="existing">
+    <h2 id="existing">Uploads</h2>
+    {% if jobs %}
+      <table class="grid">
+        <caption class="visually-hidden">Uploaded documents and their state</caption>
+        <thead>
+          <tr>
+            <th scope="col">File</th>
+            <th scope="col">Title</th>
+            <th scope="col">State</th>
+            <th scope="col">Size</th>
+            <th scope="col">Uploaded</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+            <tr>
+              <th scope="row">
+                <a href="/admin/uploads/{{ job.id }}">{{ job.original_filename }}</a>
+              </th>
+              <td>
+                {%- set document = documents.get(job.document_id) -%}
+                {{ document.title if document else '—' }}
+              </td>
+              {# The refusal reason is part of the state, because "refused"
+                 alone leaves the person to guess. #}
+              <td>
+                {{ job.state | replace('_', ' ') }}
+                {%- if job.refusal_reason %} ({{ job.refusal_reason | replace('_', ' ') }}){% endif %}
+              </td>
+              <td>{{ (job.byte_size / 1024) | round | int }} KB</td>
+              <td>{{ job.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>Nothing has been uploaded yet.</p>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

@@ -70,5 +70,8 @@
   {% if who.can(permission.MANAGE_SOURCES) %}
     <p><a href="/admin/sources">Manage sources</a></p>
   {% endif %}
+  {% if who.can(permission.MANAGE_DOCUMENTS) %}
+    <p><a href="/admin/uploads">Upload and manage documents</a></p>
+  {% endif %}
 </main>
 {% endblock %}

@@ -326,3 +326,37 @@ body {
 }
 /* Wide tables scroll inside their own container rather than the page. */
 .admin table { display: block; overflow-x: auto; }
+
+/* The extracted-text preview on an upload. Monospace because the point is to
+ * see exactly what came out, including the runs of spaces and the broken
+ * ligatures a bad PDF extraction leaves behind. */
+.preview {
+  max-height: 24rem;
+  overflow: auto;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: var(--radius);
+  background: var(--dumi-surface);
+  font-family: var(--dumi-font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  /* Long unbroken strings in an extraction do not widen the page. */
+  overflow-wrap: anywhere;
+}
+
+/* Select controls match the text inputs beside them. Without this they fall
+ * back to the platform default and the form reads as two designs. */
+.auth__form select {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: var(--radius);
+  background: var(--dumi-surface);
+  color: var(--dumi-ink);
+  font: inherit;
+}
+.auth__form input[type="file"] {
+  padding: 0.55rem 0;
+  font: inherit;
+}
