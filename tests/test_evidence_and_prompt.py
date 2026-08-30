@@ -300,9 +300,16 @@ class TestPromptConstruction:
 class TestEvidenceBlock:
     def test_each_passage_carries_its_locator_and_language(self) -> None:
         block = format_evidence_block([chunk()], "evidence-test")
-        assert "Adresse anmelden > Gebuehren" in block
+        # The locator drops the leading section when it repeats the title, so
+        # this reads "Adresse anmelden | Gebuehren" rather than repeating.
+        assert "Gebuehren" in block
         assert "language: de" in block
         assert "https://www.zug.ch/behoerden/anmeldung" in block
+
+    def test_the_locator_does_not_repeat_the_document_title(self) -> None:
+        """A citation reading "Adresse anmelden - Adresse anmelden > Gebuehren"
+        looks careless, and a page's h1 and title normally say the same thing."""
+        assert chunk().citation_anchor == "Gebuehren"
 
     def test_the_block_is_explicitly_delimited(self) -> None:
         block = format_evidence_block([chunk()], "evidence-abc123")

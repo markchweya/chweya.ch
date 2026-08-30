@@ -107,12 +107,23 @@ class RetrievedChunk:
 
     @property
     def citation_anchor(self) -> str:
-        """A short human-readable locator within the document."""
+        """A short human-readable locator within the document.
+
+        The leading section is dropped when it repeats the document title,
+        which it usually does: a page's h1 and its title element normally say
+        the same thing, and a citation reading "Adresse anmelden — Adresse
+        anmelden > Gebuehren" looks careless.
+        """
         if self.page_number is not None:
             return f"page {self.page_number}"
-        if self.section_path:
-            return " > ".join(self.section_path)
-        return ""
+        if not self.section_path:
+            return ""
+
+        path = list(self.section_path)
+        title = (self.document_title or "").strip().lower()
+        if path and title and path[0].strip().lower() == title:
+            path = path[1:]
+        return " > ".join(path)
 
 
 @dataclass
