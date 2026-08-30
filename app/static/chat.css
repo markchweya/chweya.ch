@@ -258,12 +258,28 @@ body {
 }
 .ask input[type="text"]:focus { outline: none; }
 
-/* Icon buttons, 2.75rem (44px) — the minimum target size. The disc carries
-   the same glacier-to-teal gradient as the user's bubble, so the control
-   that sends a message and the message it becomes read as the same
-   material. While a request is in flight the stop square takes the send
-   arrow's place; same disc, different glyph. */
+/* Text buttons, used across the administration forms. 44px minimum. */
 .send, .stop {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 1.1rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: 999px;
+  background: var(--dumi-surface);
+  color: var(--dumi-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.send:hover, .stop:hover { background: var(--dumi-ground); }
+
+/* In the chat composer the same classes become icon discs, 2.75rem (44px).
+   Scoped to .ask: the administration pages put text in these buttons, and a
+   sentence crushed into a circle is what this selector previously did to
+   them. The disc carries the same glacier-to-teal gradient as the user's
+   bubble; while a request is in flight the stop square takes the send
+   arrow's place. */
+.ask .send, .ask .stop {
   display: grid;
   place-items: center;
   width: 2.75rem;
@@ -271,22 +287,20 @@ body {
   flex: none;
   padding: 0;
   border: 0;
-  border-radius: 999px;
   background: linear-gradient(
     135deg,
     rgb(var(--dumi-flow-rgb)) 0%,
     rgb(var(--dumi-deep-rgb)) 90%
   );
   color: #fff;
-  cursor: pointer;
 }
-.send svg { margin-left: -2px; }     /* optically centre the arrow */
+.ask .send:hover, .ask .stop:hover { filter: brightness(1.12); }
+.ask .send svg { margin-left: -2px; }     /* optically centre the arrow */
 
 /* display: grid above beats the browser's own [hidden] { display: none },
  * because author rules always win over the UA sheet. Without this line both
  * icons render at once. */
 .send[hidden], .stop[hidden] { display: none; }
-.send:hover, .stop:hover { filter: brightness(1.12); }
 .status { min-height: 1.25rem; margin: 0.5rem 0 0; font-size: 0.875rem; color: var(--dumi-ink-soft); }
 
 /* --- small screens ------------------------------------------------------- */
@@ -420,4 +434,32 @@ body {
 .auth__form input[type="file"] {
   padding: 0.55rem 0;
   font: inherit;
+}
+
+/* The decision fieldset on the contradiction review page. Each radio label
+ * is a full sentence stating its consequence, so it reads as prose, not as
+ * a form control's caption. */
+.auth__form fieldset {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 0.6rem;
+}
+.auth__form legend { font-weight: 600; padding: 0 0.35rem; }
+.auth__form fieldset label {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.auth__form fieldset input[type="radio"] {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--dumi-flow);
 }
