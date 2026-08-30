@@ -21,7 +21,7 @@ help: ## Show this help
 setup: ## Create the virtualenv, install dependencies, copy .env
 	python3 -m venv .venv
 	$(PIP) install --upgrade pip
-	$(PIP) install -e ".[dev]"
+	$(PIP) install -e ".[dev,ingest,embed]"
 	@if [ ! -f .env ]; then \
 	  cp .env.example .env; \
 	  echo ""; \
