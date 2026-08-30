@@ -63,8 +63,10 @@ EXCLUDED_PATH_PATTERNS = (
     # Content-management view endpoints. "@@" is the CMS view namespace on
     # zg.ch, and the *_view and export_pdf paths serve the page we already
     # crawled again, as a widget or a generated download. Each one fetched
-    # spends page budget on a duplicate.
-    re.compile(r"@@"),
+    # spends page budget on a duplicate. "@@download" is the exception: it
+    # is how this CMS serves the actual file behind a document link, so
+    # blocking it would silently drop every linked PDF.
+    re.compile(r"@@(?!download(?=[/?]|$))"),
     re.compile(r"/[\w-]*_view" + SEGMENT_END, re.IGNORECASE),
     re.compile(r"/export_pdf" + SEGMENT_END, re.IGNORECASE),
     # Interactive form endpoints, which are applications, not content.

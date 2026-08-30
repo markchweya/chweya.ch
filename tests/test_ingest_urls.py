@@ -148,6 +148,15 @@ class TestEvaluate:
         ):
             assert evaluate(f"https://www.zug.ch{path}", ZUG).allowed, path
 
+    def test_the_download_view_is_allowed_despite_the_view_filter(self) -> None:
+        """A document link on zg.ch redirects to @@download to serve the
+        file. A live crawl showed the @@ filter silently dropping every
+        linked PDF through this endpoint, so the exception is pinned."""
+        allowed = "/themen/downloads/sozialbericht-2022/@@download/file/bericht.pdf"
+        assert evaluate(f"https://www.zug.ch{allowed}", ZUG).allowed
+        assert not evaluate("https://www.zug.ch/thema/@@downloads-liste", ZUG).allowed
+        assert not evaluate("https://www.zug.ch/thema/@@megaphone_news", ZUG).allowed
+
     def test_deep_paths_are_refused(self) -> None:
         deep = "https://www.zug.ch/" + "/".join(str(i) for i in range(40))
         assert evaluate(deep, ZUG).reason == "path_too_deep"
