@@ -59,4 +59,24 @@ Approval is withheld automatically when the content carries an injection flag
 or when extraction quality is low or failed. Those go to `awaiting_review` and
 cannot be retrieved until a person looks.
 
-Administrator uploads are never auto-approved.
+Administrator uploads are never auto-approved. A crawled page has a public URL
+anybody can check it against; an uploaded file has only the word of whoever
+sent it. So an uploaded version arrives as `awaiting_review` whatever its
+extraction quality, and its document arrives as a draft, which keeps it out of
+the public index even if some later code path approves the version by mistake.
+
+## The upload path
+
+Validation, quarantine, malware scan, extraction, persistence, approval. The
+order is the design: nothing is written to disk before validation passes,
+nothing leaves quarantine before the scan passes, and no parser sees the file
+before both have.
+
+A refused file keeps no bytes and leaves a row saying why. An infected file has
+its bytes deleted immediately. A file whose scan could not reach a verdict
+stays in quarantine, because a scanner that failed is not a detection and
+deleting would destroy the only copy of something that may be fine.
+
+Deleting an upload removes the bytes, the extracted text and the passages, and
+keeps the version row with status `gone`. That is the same reasoning as
+everywhere else here: a citation issued last month has to stay explicable.

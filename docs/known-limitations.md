@@ -30,7 +30,6 @@ against nothing.
 - Scheduled synchronisation. Crawls are manual.
 - Multi-level link following. One level within a source's base path.
 - OCR. Scanned PDFs are detected and flagged, never read.
-- DOCX, CSV and administrator uploads.
 - Concurrency. URLs are crawled one at a time; `CRAWLER_MAX_CONCURRENCY` is
   read and unused.
 - Nothing transitions a removed page to `gone`. A deleted canton page keeps
@@ -44,8 +43,6 @@ against nothing.
   referring to a previous answer will not resolve.
 
 ### Administration
-- Document upload, including magic-byte validation in the request path and
-  malware scanner invocation.
 - The contradiction review interface. Detection works; resolving needs SQL.
 - The specified effect of an open contradiction on answer confidence is
   documented and not wired in.
@@ -84,6 +81,25 @@ problem for a real person.
 
 **The confidence thresholds are judgement, not evidence.** They encode a view
 about when a public body should answer and when it should defer.
+
+**No malware scanner has run against an uploaded file.** The invocation is
+tested with stand-in commands that exit 0, 1 and 7, which establishes that the
+outcomes are handled and that a filename cannot become a command. It does not
+establish that ClamAV works, because ClamAV is not installed here.
+`MALWARE_SCANNER_COMMAND` is unset in development, so a file is promoted out of
+quarantine unscanned; production refuses to start without it.
+
+**An approved upload is searchable by keyword before it is searchable by
+meaning.** Approval populates the text search vector in the request. Embeddings
+are filled in by the indexing run, which loads a model and does not belong in a
+request, so a newly approved document is found by wording until that run
+happens.
+
+**Deleting an upload leaves its version row.** The bytes, the extracted text
+and the passages go; the version stays with status `gone` so a citation issued
+before the deletion can still be explained. Anyone reading that as a full
+erasure would be wrong, and a subject-access deletion needs the version row
+handled too.
 
 ## What must not be claimed
 

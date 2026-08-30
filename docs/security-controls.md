@@ -33,6 +33,37 @@ SQLAlchemy; Jinja autoescaping; a Content-Security-Policy with no
 Question length is bounded at 1000 characters; the prompt context budget is
 enforced locally rather than left to the model server.
 
+## Uploaded files
+
+Three signals must agree before a file is accepted: the extension, the declared
+Content-Type and the leading bytes. Only the third is evidence, so it decides,
+and a disagreement is itself the finding. Executables, scripts, legacy Office
+files and archives are refused by signature before the extension is consulted.
+A DOCX is inspected as a ZIP for macros, embedded executables, entry paths and
+compression ratio. A text format is checked for another format's signature, so
+a PDF renamed `.txt` is refused rather than indexed as mangled text.
+
+The upload body is read against a byte cap while reading, not after, because
+`Content-Length` is supplied by the client and a chunked request carries none.
+
+Stored names are generated server-side and sharded; nothing derived from the
+uploaded filename reaches a path, so traversal has no attacker-controlled
+component to work with. A resolved path outside the storage root raises. Files
+are written `0600` through a temporary name, so a partial write is never
+visible under the final path.
+
+New uploads land in quarantine and are promoted only after the scanner passes.
+The scanner is invoked with an argv list and no shell, under a minimal
+environment and a timeout, so a filename cannot become a command. Exit 0 is
+clean, 1 is a detection, anything else is a failure, and a failure is not
+clean.
+
+The filename is treated as attacker-controlled display text: normalised, with
+control characters and bidirectional overrides stripped, so a `.exe` cannot
+display as a `.pdf`. Originals are served as `application/octet-stream` with
+`nosniff` and a quote-free ASCII disposition name, so a stored HTML file cannot
+run in an administrator's session.
+
 ## Outbound requests
 
 Every fetch goes through `GuardedFetcher`. Nothing else in the codebase opens
@@ -78,8 +109,9 @@ residents asked. Only hostnames are logged for crawl activity, never full URLs.
 - CSRF synchroniser tokens on administrative forms. `SameSite` covers the
   common case; a token is stronger.
 - Distributed rate limiting. The current limiter is per process.
-- Malware scanning execution. The configuration point exists and production
-  refuses to start without it.
+- A real malware scanner. The pipeline invokes the configured command and
+  handles every outcome; no actual scanner has run against a file here, and
+  development leaves the command unset.
 - Off-host audit shipping.
 - TLS termination, which belongs in front of the application.
 - Dependency vulnerability scanning in CI. `make security` runs `pip-audit`

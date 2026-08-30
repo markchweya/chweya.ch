@@ -15,8 +15,11 @@ marked **required** must be done before the canton is asked to consider it.
       with `DATABASE_APP_ROLE` set so the audit grants apply
 - [ ] **blocking** Rate limiting moved to Redis; the current limiter is per
       process
-- [ ] **blocking** `MALWARE_SCANNER_COMMAND` set and actually invoked before
-      any upload path is enabled
+- [ ] **blocking** `MALWARE_SCANNER_COMMAND` set to a real scanner and proven
+      against the EICAR test file. The upload pipeline invokes it and handles
+      every outcome; no actual scanner has ever run
+- [ ] **blocking** The upload storage directory mounted `noexec` and `nosuid`,
+      and excluded from any path a web server can serve directly
 - [ ] **required** Multi-factor authentication for administrators
 - [ ] **required** CSRF synchroniser tokens on administrative forms
 - [ ] **required** Audit log shipped off-host
@@ -42,6 +45,9 @@ marked **required** must be done before the canton is asked to consider it.
 - [ ] **blocking** `CRAWLER_CONTACT` set to a monitored address
 - [ ] **blocking** Path exclusions checked against the real site
 - [ ] **required** Canton informed before a first full crawl
+- [ ] **required** A named person accountable for approving uploaded documents.
+      The system requires an approval; it cannot require that the approver
+      checked anything
 - [ ] **required** Permission obtained before using the canton's name, arms or
       branding anywhere
 
