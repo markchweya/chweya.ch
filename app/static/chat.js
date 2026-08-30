@@ -19,6 +19,7 @@
   var transcript = document.getElementById("transcript");
   var status = document.getElementById("status");
   var stopButton = document.getElementById("stop");
+  var sendButton = document.getElementById("send");
   if (!form || !input || !transcript) return;
 
   var controller = null;
@@ -68,12 +69,20 @@
 
   function renderCitations(body, citations, labels) {
     if (!citations || !citations.length) return;
-    var section = document.createElement("section");
+    // The same collapsed disclosure the server renders. The two paths must
+    // produce the same page, or the no-script experience quietly diverges.
+    var section = document.createElement("details");
     section.className = "sources";
-    var heading = document.createElement("h3");
-    heading.className = "sources__title";
-    heading.textContent = labels.sources;
-    section.appendChild(heading);
+    var summary = document.createElement("summary");
+    summary.className = "sources__summary";
+    summary.innerHTML =
+      '<svg class="sources__chevron" viewBox="0 0 24 24" width="14" height="14"' +
+      ' fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"' +
+      ' stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+    summary.appendChild(
+      document.createTextNode(labels.sources + " (" + citations.length + ")")
+    );
+    section.appendChild(summary);
 
     var list = document.createElement("ol");
     list.className = "sources__list";
@@ -134,6 +143,7 @@
     addUserMessage(question);
     var shell = addAnswerShell();
     stopButton.hidden = false;
+    if (sendButton) sendButton.hidden = true;
 
     controller = new AbortController();
 
@@ -169,6 +179,7 @@
       })
       .finally(function () {
         stopButton.hidden = true;
+        if (sendButton) sendButton.hidden = false;
         controller = null;
         input.focus();
       });
@@ -179,5 +190,6 @@
   stopButton.addEventListener("click", function () {
     if (controller) controller.abort();
     stopButton.hidden = true;
+    if (sendButton) sendButton.hidden = false;
   });
 })();

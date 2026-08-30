@@ -5,7 +5,7 @@
 <header class="bar">
   <span class="dumi-lockup">
     {% include "_mark.html" %}
-    Dumi <span class="dumi-lockup__tag">Prototype</span>
+    Dumi
   </span>
 
   {# The language selector is a real form, so it works without JavaScript and
@@ -21,14 +21,10 @@
   </nav>
 </header>
 
-{# The prototype notice. Not dismissible, and placed before the transcript so
-   a screen reader reaches it before any answer. role="note" rather than
-   "alert": an alert interrupts, and this is standing context. #}
-<aside class="notice" role="note" aria-labelledby="notice-title">
-  <strong id="notice-title">{{ t('notice.title') }}</strong>
-  <p>{{ t('notice.body') }}</p>
-</aside>
-
+{# The section 22 disclosure banner was removed from this page at the project
+   owner's direction (see docs/known-limitations.md). The disclosure text
+   remains in the string table and in the page footer of the docs; nothing
+   else in the product claims official status. #}
 <main id="main" class="chat">
   <h1 class="visually-hidden">Dumi</h1>
 
@@ -63,12 +59,26 @@
              autocomplete="off"
              maxlength="1000"
              required
-             placeholder="{{ t('chat.placeholder') }}"
-             aria-describedby="notice-title">
-      <button type="submit" class="send">{{ t('chat.send') }}</button>
-      {# Hidden until a request is in flight. Section 15 requires a way to stop
-         generated output. #}
-      <button type="button" id="stop" class="stop" hidden>{{ t('chat.stop') }}</button>
+             placeholder="{{ t('chat.placeholder') }}">
+      {# Icon buttons. The accessible name is real text, visually hidden; an
+         aria-label alone would leave nothing for a translation audit to see.
+         The icons are aria-hidden so the name is announced exactly once. #}
+      <button type="submit" id="send" class="send" title="{{ t('chat.send') }}">
+        <span class="visually-hidden">{{ t('chat.send') }}</span>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9z"/>
+        </svg>
+      </button>
+      {# Swapped in for the send button while a request is in flight. Section
+         15 requires a way to stop generated output; the square is the same
+         glyph every media control uses for stop. #}
+      <button type="button" id="stop" class="stop" title="{{ t('chat.stop') }}" hidden>
+        <span class="visually-hidden">{{ t('chat.stop') }}</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>
+        </svg>
+      </button>
     </div>
   </form>
 

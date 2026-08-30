@@ -52,6 +52,22 @@ def resolver(host, port, *args, **kwargs):  # type: ignore[no-untyped-def]
     return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("195.65.100.10", port))]
 
 
+@pytest.fixture(autouse=True)
+def _fresh_rate_limit_window():  # type: ignore[no-untyped-def]
+    """Every test starts with an empty rate-limit window.
+
+    The limiter is process-wide and every test in this module shares one
+    client address, so without this, whether a test passes depends on how
+    many requests the tests before it happened to make. The rate-limit test
+    itself builds its own 429 by looping, so it loses nothing.
+    """
+    from app.api import chat
+
+    chat._LIMITERS.clear()
+    yield
+    chat._LIMITERS.clear()
+
+
 @dataclass
 class StubLLM:
     """A language model that returns exactly what a test needs."""
@@ -137,23 +153,15 @@ class TestChatPage:
     def test_the_page_renders(self, client) -> None:  # type: ignore[no-untyped-def]
         assert client.get("/").status_code == 200
 
-    def test_the_prototype_notice_is_present_and_not_dismissible(self, client) -> None:  # type: ignore[no-untyped-def]
+    def test_the_page_makes_no_official_claim(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The section 22 disclosure banner was removed from this page at the
+        project owner's direction (recorded in docs/known-limitations.md).
+        What must still hold: nothing on the page claims official status,
+        endorsement or a coat of arms."""
         html = client.get("/").text
-        assert "Inoffizieller KI-Prototyp" in html
-        # No control that could hide it.
-        assert "dismiss" not in html.lower()
-
-    def test_the_notice_is_localised(self, client) -> None:  # type: ignore[no-untyped-def]
-        # Substrings avoid apostrophes, which Jinja autoescaping renders as
-        # &#39;. That escaping is correct and is asserted separately below.
-        for header, expected in [
-            ("de", "Inoffizieller KI-Prototyp"),
-            ("en", "Unofficial AI prototype"),
-            ("fr", "Prototype d"),
-            ("it", "Prototipo di IA non ufficiale"),
-        ]:
-            html = client.get("/", headers={"Accept-Language": header}).text
-            assert expected in html, header
+        assert "offiziell" not in html.lower() or "inoffiziell" in html.lower()
+        assert "Kanton Zug" not in html
+        assert "wappen" not in html.lower()
 
     def test_template_output_is_autoescaped(self, client) -> None:  # type: ignore[no-untyped-def]
         """The interface renders text extracted from crawled pages and PDFs.
@@ -161,7 +169,9 @@ class TestChatPage:
         Autoescaping is the layer that stops markup in that text executing, so
         it is pinned rather than assumed.
         """
-        html = client.get("/", headers={"Accept-Language": "fr"}).text
+        html = client.post(
+            "/ask", data={"question": "Qu'est-ce que l'attestation?", "lang": "fr"}
+        ).text
         assert "&#39;" in html, "apostrophes must be escaped, not emitted raw"
 
     def test_a_question_containing_markup_is_escaped_in_the_transcript(self, client) -> None:  # type: ignore[no-untyped-def]
@@ -360,17 +370,6 @@ class TestValidation:
 
 class TestFailureHandling:
     """What a resident sees when something inside the system breaks."""
-
-    @pytest.fixture(autouse=True)
-    def _fresh_rate_limit(self):  # type: ignore[no-untyped-def]
-        """The limiter is process-wide, and the rate-limit test above spends
-        the whole budget. These tests assert on failure handling, not on
-        throttling, so they start with a clean window."""
-        from app.api import chat
-
-        chat._LIMITERS.clear()
-        yield
-        chat._LIMITERS.clear()
 
     def test_a_crash_returns_the_request_id_it_tells_you_to_quote(self, seeded, db) -> None:  # type: ignore[no-untyped-def]
         """The 500 body asks the user to quote the request id, so it must

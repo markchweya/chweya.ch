@@ -101,6 +101,13 @@ before the deletion can still be explained. Anyone reading that as a full
 erasure would be wrong, and a subject-access deletion needs the version row
 handled too.
 
+**The section 22 disclosure banner was removed from the chat page** at the
+project owner's direction on 30.08.2026. The interface no longer tells a
+visitor it is an unofficial prototype before they ask a question. The brief
+required that disclosure; anyone putting this in front of the public inherits
+the decision and should restore the banner or obtain the canton's blessing
+first. The disclosure text remains in the string table.
+
 ## What must not be claimed
 
 - Not Swiss-hosted. Nothing has been deployed anywhere.
