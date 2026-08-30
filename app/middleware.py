@@ -35,6 +35,10 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
             request_id = new_request_id()
 
         token = request_id_var.set(request_id)
+        # Also on request.state. The unhandled-exception handler runs in the
+        # outermost error middleware, after the finally below has reset the
+        # contextvar, so the contextvar alone would hand it an empty string.
+        request.state.request_id = request_id
         try:
             response = await call_next(request)
         finally:
@@ -111,12 +115,24 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     forbids exposing stack traces or internal detail, and a traceback rendered
     to a user is both an information disclosure and an unpleasant experience.
     """
-    logger.exception("unhandled_exception", path=request.url.path, method=request.method)
+    # Read from request.state, not the contextvar: this handler runs in the
+    # outermost error middleware, after RequestIdMiddleware has reset the
+    # contextvar, which is how the body ended up telling people to quote an
+    # empty string.
+    request_id = getattr(request.state, "request_id", "") or request_id_var.get()
+    logger.exception(
+        "unhandled_exception",
+        path=request.url.path,
+        method=request.method,
+        request_id=request_id,
+    )
     return JSONResponse(
         status_code=500,
         content={
             "error": "internal_error",
             "message": "Something went wrong. Quote the request id when reporting this.",
-            "request_id": request_id_var.get(),
+            "request_id": request_id,
         },
+        # The header carries it too, matching every non-error response.
+        headers={"X-Request-ID": request_id} if request_id else None,
     )
