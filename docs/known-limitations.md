@@ -41,8 +41,6 @@ against nothing.
   its last approved version and stays retrievable.
 
 ### Retrieval and answering
-- Streaming. The provider supports it; the endpoint returns complete answers.
-  The live region and stop control are built for it and untested.
 - Reranking.
 - Conversation memory. Each question is answered independently, so a follow-up
   referring to a previous answer will not resolve.
