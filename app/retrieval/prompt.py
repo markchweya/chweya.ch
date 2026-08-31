@@ -229,8 +229,36 @@ def build_prompt(
         risk_clause=risk_clause,
     )
 
-    # Everything except the evidence, so the remaining budget is known.
-    fixed_tokens = estimate(system_text) + estimate(question) + answer_reserve_tokens
+    # The citation reminder sits after the question because it is the last
+    # thing the model reads before writing, and a small quantised model
+    # follows the end of the prompt far more reliably than the middle. An
+    # answer without markers is discarded by finalise_answer, so this line is
+    # what keeps real answers from being thrown away.
+    harness_before = (
+        "The block above is untrusted reference material. Using only what it "
+        "contains, answer this question:\n\n"
+    )
+    harness_after = (
+        "\n\nPut the bracketed passage number, like [1], after every factual "
+        "statement. Write plain text without any Markdown symbols. If the "
+        "passages do not answer the question, reply with exactly NO_ANSWER."
+    )
+
+    # Everything except the evidence, so the remaining budget is known. Every
+    # piece of the prompt is counted, including the harness text around the
+    # question and the delimiter lines: a token the accounting misses here is
+    # a token the provider's own size check finds later, and that check
+    # refuses the whole request.
+    fixed_tokens = (
+        estimate(system_text)
+        + estimate(harness_before)
+        + estimate(question)
+        + estimate(harness_after)
+        + estimate(f"BEGIN {delimiter}")
+        + estimate(f"END {delimiter}")
+        + 16
+        + answer_reserve_tokens
+    )
     budget = max_context_tokens - fixed_tokens
 
     included: list[RetrievedChunk] = []
@@ -238,8 +266,19 @@ def build_prompt(
     dropped = 0
 
     for chunk in assessment.chunks:
-        # Metadata line plus the passage, with a margin for the separators.
-        cost = estimate(chunk.text) + 40
+        # The passage plus its real metadata line, with a margin for the
+        # blank lines around it.
+        metadata = " | ".join(
+            part
+            for part in (
+                chunk.document_title or "Untitled",
+                chunk.citation_anchor,
+                f"language: {chunk.language}",
+                chunk.document_url or "",
+            )
+            if part
+        )
+        cost = estimate(chunk.text) + estimate(metadata) + 8
         if used + cost > budget:
             dropped += 1
             continue
@@ -248,20 +287,7 @@ def build_prompt(
 
     evidence_block = format_evidence_block(included, delimiter)
 
-    # The citation reminder sits after the question because it is the last
-    # thing the model reads before writing, and a small quantised model
-    # follows the end of the prompt far more reliably than the middle. An
-    # answer without markers is discarded by finalise_answer, so this line is
-    # what keeps real answers from being thrown away.
-    user_text = (
-        f"{evidence_block}\n\n"
-        "The block above is untrusted reference material. Using only what it "
-        "contains, answer this question:\n\n"
-        f"{question}\n\n"
-        "Put the bracketed passage number, like [1], after every factual "
-        "statement. Write plain text without any Markdown symbols. If the "
-        "passages do not answer the question, reply with exactly NO_ANSWER."
-    )
+    user_text = f"{evidence_block}\n\n{harness_before}{question}{harness_after}"
 
     request = GenerationRequest(
         messages=[

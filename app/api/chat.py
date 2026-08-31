@@ -237,6 +237,7 @@ def _stream_response(
                     question,
                     language=language,
                     max_context_tokens=settings.apertus_max_context_tokens,
+                    max_output_tokens=settings.apertus_max_output_tokens,
                 )
                 yield _sse({"type": "final", "payload": _answer_payload(answer, language)})
                 return
@@ -248,6 +249,7 @@ def _stream_response(
                 question,
                 language=language,
                 max_context_tokens=settings.apertus_max_context_tokens,
+                max_output_tokens=settings.apertus_max_output_tokens,
             ):
                 if kind == "delta":
                     yield _sse({"type": "delta", "text": item})
@@ -300,6 +302,7 @@ async def _produce_answer(
             question,
             language=language,
             max_context_tokens=settings.apertus_max_context_tokens,
+            max_output_tokens=settings.apertus_max_output_tokens,
         )
     finally:
         close = getattr(llm, "aclose", None)

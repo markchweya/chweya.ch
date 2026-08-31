@@ -58,6 +58,13 @@ _MD_CODE = re.compile(r"`+")
 
 MAX_QUESTION_CHARACTERS = 1000
 
+# Added to the configured output limit when reserving prompt space, covering
+# the per-message overhead the provider counts and the roughness of the
+# character-based token estimate. The reserve must always exceed what the
+# provider adds to the prompt before its size check, or an answer fails
+# before generation even starts.
+ANSWER_RESERVE_MARGIN = 128
+
 
 @dataclass
 class Citation:
@@ -384,6 +391,7 @@ def prepare_answer(
     *,
     language: str | None = None,
     max_context_tokens: int = 8192,
+    max_output_tokens: int = 512,
     estimate_tokens=None,  # type: ignore[no-untyped-def]
 ) -> Answer | PreparedAnswer:
     """Run everything that happens before the model: validation, social
@@ -458,6 +466,7 @@ def prepare_answer(
         assessment,
         answer_language=answer_language,
         max_context_tokens=max_context_tokens,
+        answer_reserve_tokens=max_output_tokens + ANSWER_RESERVE_MARGIN,
         estimate_tokens=estimate_tokens,
     )
     return PreparedAnswer(
@@ -553,6 +562,7 @@ async def answer_question(
     *,
     language: str | None = None,
     max_context_tokens: int = 8192,
+    max_output_tokens: int = 512,
 ) -> Answer:
     """Answer one question, or explain honestly why it cannot be answered."""
     prepared = prepare_answer(
@@ -561,6 +571,7 @@ async def answer_question(
         question,
         language=language,
         max_context_tokens=max_context_tokens,
+        max_output_tokens=max_output_tokens,
         estimate_tokens=llm.estimate_tokens,
     )
     if isinstance(prepared, Answer):
@@ -593,6 +604,7 @@ async def stream_answer(
     *,
     language: str | None = None,
     max_context_tokens: int = 8192,
+    max_output_tokens: int = 512,
 ):  # type: ignore[no-untyped-def]  # AsyncIterator[tuple[str, str | Answer]]
     """Answer one question incrementally.
 
@@ -611,6 +623,7 @@ async def stream_answer(
         question,
         language=language,
         max_context_tokens=max_context_tokens,
+        max_output_tokens=max_output_tokens,
         estimate_tokens=llm.estimate_tokens,
     )
     if isinstance(prepared, Answer):

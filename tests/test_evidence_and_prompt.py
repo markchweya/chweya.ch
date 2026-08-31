@@ -308,6 +308,31 @@ class TestPromptConstruction:
         outcome = assess(found(chunk(text=exact), chunk(title="B")), "Was kostet das?", now=NOW)
         assert exact in build_prompt("Was kostet das?", outcome).request.messages[1].content
 
+    def test_the_assembled_prompt_always_fits_the_provider_check(self) -> None:
+        """The provider refuses a request when prompt plus output exceeds the
+        context window. A live deployment at 3072 context and 512 output
+        tokens had every answer fail this check before generation, because
+        the budget did not count the harness text or reserve the real output
+        size. This test replays the provider's arithmetic exactly."""
+        estimate = lambda text: int(len(text) / 3.0) + 1  # noqa: E731 - the provider's own
+        chunks = [
+            chunk(text="Die Einwohnerkontrolle verlangt diese Angaben. " * 60, score=0.03 - i * 0.001)
+            for i in range(12)
+        ]
+        outcome = assess(found(*chunks), "Was kostet die Anmeldung?", now=NOW)
+        max_output = 512
+        built = build_prompt(
+            "Was kostet die Anmeldung?",
+            outcome,
+            max_context_tokens=3072,
+            answer_reserve_tokens=max_output + 128,
+            estimate_tokens=estimate,
+        )
+        prompt_tokens = sum(estimate(m.content) for m in built.request.messages)
+        prompt_tokens += 4 * len(built.request.messages)
+        assert prompt_tokens + max_output <= 3072
+        assert built.cited_chunks, "the budget must still admit evidence"
+
     def test_the_context_budget_drops_the_weakest_passages(self) -> None:
         """Truncation must keep the strongest evidence, not an arbitrary end."""
         chunks = [chunk(text="x" * 4000, score=0.03 - i * 0.001) for i in range(10)]
