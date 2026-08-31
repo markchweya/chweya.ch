@@ -399,8 +399,10 @@ class TestAnswering:
         assert "<li>Formular senden [1]</li>" in html
 
     def test_the_page_renders_pipe_rows_as_a_table(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The first row is the header; the rest are data rows."""
         client.stub.text = (
             "Die Daten stehen fest [1].\n\n"
+            "Ferien | Beginn | Ende\n"
             "Herbstferien | 05.10.2026 | 16.10.2026\n"
             "Sportferien | 06.02.2027 | 21.02.2027"
         )
@@ -408,8 +410,52 @@ class TestAnswering:
             "/ask", data={"question": "Was kostet die Anmeldung?", "lang": "de"}
         ).text
         assert 'class="answer-table"' in html
+        assert '<th scope="col">Ferien</th>' in html
         assert "<td>Herbstferien</td>" in html
         assert "<td>21.02.2027</td>" in html
+
+    def test_a_prose_schedule_is_retried_and_the_rows_shown(self, client, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """The model flattened table rows into a paragraph of dates. One
+        corrective turn asks for the rows; the corrected answer is shown."""
+        monkeypatch.setattr(
+            "app.retrieval.answer.evidence_has_table_rows", lambda prepared: True
+        )
+        client.stub.text = (
+            "Die Herbstferien dauern vom 03.10.2026 bis 18.10.2026 und die "
+            "Weihnachtsferien vom 19.12.2026 bis 03.01.2027 [1]."
+        )
+        client.stub.retry_text = (
+            "Die Ferien stehen fest [1].\n\n"
+            "Ferien | Beginn | Ende\n"
+            "Herbstferien | 03.10.2026 | 18.10.2026 [1]"
+        )
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert client.stub.calls == 2
+        assert "Ferien | Beginn | Ende" in payload["text"]
+        assert not payload["is_refusal"]
+
+    def test_a_failed_table_retry_keeps_the_prose_answer(self, client, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """A NO_ANSWER retry must not erase a valid, cited prose answer."""
+        monkeypatch.setattr(
+            "app.retrieval.answer.evidence_has_table_rows", lambda prepared: True
+        )
+        client.stub.text = (
+            "Die Herbstferien dauern vom 03.10.2026 bis 18.10.2026 und die "
+            "Weihnachtsferien vom 19.12.2026 bis 03.01.2027 [1]."
+        )
+        client.stub.retry_text = "NO_ANSWER"
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert client.stub.calls == 2
+        assert "03.10.2026" in payload["text"]
+        assert not payload["is_refusal"]
 
     def test_an_answer_with_no_citations_is_withheld_and_the_sources_offered(self, client) -> None:  # type: ignore[no-untyped-def]
         """The prompt required citations and evidence was supplied, so the

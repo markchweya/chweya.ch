@@ -221,12 +221,15 @@
     var wrap = document.createElement("div");
     wrap.className = "answer-table";
     var table = document.createElement("table");
-    rows.forEach(function (row) {
+    rows.forEach(function (row, index) {
       var tr = document.createElement("tr");
       row.split(" | ").forEach(function (cell) {
-        var td = document.createElement("td");
-        td.textContent = cell.trim();
-        tr.appendChild(td);
+        var box = document.createElement(index === 0 ? "th" : "td");
+        if (index === 0) {
+          box.setAttribute("scope", "col");
+        }
+        box.textContent = cell.trim();
+        tr.appendChild(box);
       });
       table.appendChild(tr);
     });

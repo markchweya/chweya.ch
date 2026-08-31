@@ -12,7 +12,13 @@ import uuid
 
 import pytest
 
-from app.retrieval.answer import strip_markup, validate_citations
+from app.retrieval.answer import (
+    PreparedAnswer,
+    needs_table_retry,
+    strip_markup,
+    table_retry_usable,
+    validate_citations,
+)
 from app.retrieval.evidence import (
     Confidence,
     RiskTopic,
@@ -384,6 +390,60 @@ class TestCitationValidation:
     def test_an_answer_with_no_citations_is_detected(self) -> None:
         _, kept, _ = validate_citations("The fee is twenty francs.", 3)
         assert kept == []
+
+
+ROWS = "Ferien | Beginn | Ende\nHerbstferien | 03.10.2026 | 18.10.2026"
+FLATTENED = (
+    "Die Herbstferien dauern vom 03.10.2026 bis 18.10.2026 und die "
+    "Weihnachtsferien vom 19.12.2026 bis 03.01.2027 [1]."
+)
+
+
+def _prepared(*chunks: RetrievedChunk) -> PreparedAnswer:
+    outcome = assess(found(*chunks), "Wann sind die Schulferien?", now=NOW)
+    built = build_prompt("Wann sind die Schulferien?", outcome)
+    return PreparedAnswer(
+        prompt=built, assessment=outcome, answer_language="de", degraded_reason=""
+    )
+
+
+class TestTableRetry:
+    """A schedule flattened into prose gets one corrective turn."""
+
+    def test_prose_full_of_dates_with_rows_in_evidence_is_retried(self) -> None:
+        prepared = _prepared(chunk(text=ROWS), chunk(title="B"))
+        assert needs_table_retry(FLATTENED, prepared)
+
+    def test_an_answer_that_already_has_rows_is_left_alone(self) -> None:
+        prepared = _prepared(chunk(text=ROWS), chunk(title="B"))
+        assert not needs_table_retry("Die Ferien [1]:\n" + ROWS, prepared)
+
+    def test_prose_is_left_alone_when_the_evidence_had_no_rows(self) -> None:
+        prepared = _prepared(chunk(), chunk(title="B"))
+        assert not needs_table_retry(FLATTENED, prepared)
+
+    def test_ordinary_prose_beside_a_table_is_left_alone(self) -> None:
+        """A short factual answer that shares a page with a table must not
+        pay for a second model call."""
+        prepared = _prepared(chunk(text=ROWS), chunk(title="B"))
+        assert not needs_table_retry("Die Anmeldung kostet CHF 20 [1].", prepared)
+
+    def test_a_declared_no_answer_is_never_retried_for_a_table(self) -> None:
+        prepared = _prepared(chunk(text=ROWS), chunk(title="B"))
+        assert not needs_table_retry("NO_ANSWER", prepared)
+
+    def test_a_cited_retry_with_rows_is_usable(self) -> None:
+        prepared = _prepared(chunk(text=ROWS), chunk(title="B"))
+        assert table_retry_usable("Die Ferien [1]:\n" + ROWS + " [1]", prepared)
+
+    def test_a_retry_that_lost_its_citations_is_discarded(self) -> None:
+        prepared = _prepared(chunk(text=ROWS), chunk(title="B"))
+        assert not table_retry_usable(ROWS, prepared)
+
+    def test_a_retry_that_gave_up_is_discarded(self) -> None:
+        """The prose answer was valid; a NO_ANSWER retry must not erase it."""
+        prepared = _prepared(chunk(text=ROWS), chunk(title="B"))
+        assert not table_retry_usable("NO_ANSWER", prepared)
 
 
 class TestMarkupStripping:

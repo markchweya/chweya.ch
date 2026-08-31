@@ -345,20 +345,35 @@ html:has(#transcript)::-webkit-scrollbar { display: none; }
 
 /* Table rows from the canton's pages, rebuilt as a real table. Wide tables
  * scroll inside their own container rather than widening the page. */
-.answer-table { margin: 0.6rem 0; overflow-x: auto; }
+/* Tabular data as an actual table: framed and rounded as one card, the
+ * header row tinted with the ice token, row separators instead of a full
+ * grid. Wide tables scroll inside the card; the page never scrolls
+ * sideways. */
+.answer-table {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  border: 1px solid var(--dumi-line);
+  border-radius: 10px;
+}
 .answer-table table {
   border-collapse: collapse;
+  width: 100%;
   font-size: 0.9375rem;
   white-space: normal;
 }
+.answer-table th,
 .answer-table td {
-  padding: 0.45rem 0.8rem;
-  border: 1px solid var(--dumi-line);
+  padding: 0.55rem 0.85rem;
+  text-align: left;
   vertical-align: top;
 }
-.answer-table tr:first-child td {
+.answer-table th {
   font-weight: 600;
-  background: rgb(var(--dumi-ice-rgb) / 0.08);
+  background: rgb(var(--dumi-ice-rgb) / 0.1);
+}
+.answer-table td { border-top: 1px solid var(--dumi-line); }
+.answer-table tr:nth-child(odd) td {
+  background: rgb(var(--dumi-ice-rgb) / 0.03);
 }
 
 /* --- feedback ------------------------------------------------------------ */

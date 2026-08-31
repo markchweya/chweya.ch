@@ -36,10 +36,17 @@
               {% for entry in block.entries %}<li>{{ entry }}</li>{% endfor %}
             </ol>
           {% elif block.kind == 'table' %}
+            {# The first row is the header: the prompt asks the model to
+               name the columns there, and the extractor's rows carry the
+               source table's own header first. #}
             <div class="answer-table">
               <table>
                 {% for row in block.rows %}
-                  <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                  {% if loop.first %}
+                    <tr>{% for cell in row %}<th scope="col">{{ cell }}</th>{% endfor %}</tr>
+                  {% else %}
+                    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                  {% endif %}
                 {% endfor %}
               </table>
             </div>

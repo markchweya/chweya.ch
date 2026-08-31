@@ -287,20 +287,76 @@ def needs_citation_retry(text: str, prepared: PreparedAnswer) -> bool:
     return not kept
 
 
-def correction_request(prepared: PreparedAnswer, first_text: str) -> GenerationRequest:
-    """The retry conversation: the original prompt, the model's uncited
+def correction_request(
+    prepared: PreparedAnswer,
+    first_text: str,
+    instruction: str = _CITATION_CORRECTION,
+) -> GenerationRequest:
+    """The retry conversation: the original prompt, the model's flawed
     answer, and the correction."""
     original = prepared.prompt.request
     return GenerationRequest(
         messages=[
             *original.messages,
             ChatMessage(role=Role.ASSISTANT, content=first_text),
-            ChatMessage(role=Role.USER, content=_CITATION_CORRECTION),
+            ChatMessage(role=Role.USER, content=instruction),
         ],
         max_output_tokens=original.max_output_tokens,
         temperature=original.temperature,
         stop=original.stop,
     )
+
+
+# Sent back, once, when the model flattened supplied table rows into prose.
+# The observed failure: asked for the school holidays, with the rows in its
+# evidence, it wrote one paragraph stuffed with a dozen dates.
+_TABLE_CORRECTION = (
+    "Your answer rewrote tabular data into prose sentences. Write it again "
+    "using the table rows from the passages: one row per line, cells "
+    "separated by |, a first row naming the columns, and the citation after "
+    "the last row. At most two short sentences around the rows."
+)
+
+_DATE_TOKEN = re.compile(r"\b\d{1,2}\.\s?\d{1,2}\.\d{2,4}\b")
+_MONEY_TOKEN = re.compile(r"\bCHF\b|\bFranken\b", re.IGNORECASE)
+
+
+def evidence_has_table_rows(prepared: PreparedAnswer) -> bool:
+    """Whether any supplied passage carries rows with | separated cells."""
+    return any(" | " in chunk.text for chunk in prepared.prompt.cited_chunks)
+
+
+def needs_table_retry(text: str, prepared: PreparedAnswer) -> bool:
+    """Whether a response flattened supplied table rows into prose.
+
+    Triggers only when all three hold: the evidence contained rows, the
+    answer contains none, and the answer is dense with dates or amounts,
+    which is what flattened tabular data looks like. An ordinary prose
+    answer that happens to share a page with a table is left alone.
+    """
+    cleaned = strip_markup(text)
+    if is_no_answer(cleaned) or " | " in cleaned:
+        return False
+    if not evidence_has_table_rows(prepared):
+        return False
+    return (
+        len(_DATE_TOKEN.findall(cleaned)) >= 4
+        or len(_MONEY_TOKEN.findall(cleaned)) >= 4
+    )
+
+
+def table_retry_usable(second_text: str, prepared: PreparedAnswer) -> bool:
+    """Whether the corrected attempt should replace the first one.
+
+    The first answer was cited and valid, only badly shaped. The retry
+    replaces it solely when it is a real improvement: it has rows, still
+    cites, and does not declare the evidence insufficient. Anything else
+    keeps the prose answer; readable is better than gone.
+    """
+    cleaned = strip_markup(second_text)
+    if is_no_answer(cleaned) or " | " not in cleaned:
+        return False
+    return not needs_citation_retry(second_text, prepared)
 
 
 def validate_citations(text: str, available: int) -> tuple[str, list[int], list[int]]:
@@ -607,6 +663,17 @@ async def answer_question(
             # The first response exists; finalise it and let the uncited
             # fallback handle it rather than reporting the model unavailable.
             pass
+    elif needs_table_retry(text, prepared):
+        logger.info("answer.table_retry")
+        try:
+            second = await llm.generate(
+                correction_request(prepared, text, instruction=_TABLE_CORRECTION)
+            )
+            if table_retry_usable(second.text, prepared):
+                text, was_truncated = second.text, second.was_truncated
+        except LLMError:
+            # The prose answer is valid, only badly shaped; keep it.
+            pass
 
     return finalise_answer(text, was_truncated, prepared)
 
@@ -693,6 +760,16 @@ async def stream_answer(
         try:
             second = await llm.generate(correction_request(prepared, text))
             text = second.text
+        except LLMError:
+            pass
+    elif needs_table_retry(text, prepared):
+        logger.info("answer.table_retry")
+        try:
+            second = await llm.generate(
+                correction_request(prepared, text, instruction=_TABLE_CORRECTION)
+            )
+            if table_retry_usable(second.text, prepared):
+                text = second.text
         except LLMError:
             pass
 
