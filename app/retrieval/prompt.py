@@ -112,6 +112,11 @@ Write plain text only. The interface renders no Markdown, so formatting \
 symbols reach the reader as literal characters. Never use asterisks, \
 underscores, backticks or # headings. For a list of steps, write plain \
 numbered lines: 1. followed by the step.
+
+Some passages contain table rows written as cells separated by the | \
+character. When the answer is those rows, holiday dates or a fee schedule \
+for instance, reproduce the relevant rows exactly as they appear: one row \
+per line, cells separated by |, with the citation after the last row.
 {confidence_clause}{risk_clause}"""
 
 

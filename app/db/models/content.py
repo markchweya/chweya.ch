@@ -228,7 +228,9 @@ class CrawledUrl(Base, TimestampMixin):
     # no body.
     etag: Mapped[str | None] = mapped_column(String(256), nullable=True)
     last_modified_header: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Digest plus extraction version, like "abc...123:v2". Longer than a bare
+    # sha256 so the version marker fits.
+    content_hash: Mapped[str | None] = mapped_column(String(80), nullable=True)
 
     first_seen_at: Mapped[dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

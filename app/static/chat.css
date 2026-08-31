@@ -328,6 +328,24 @@ html:has(#transcript)::-webkit-scrollbar { display: none; }
 .sources__lang::before { content: "· "; }
 .sources__date::before { content: "· "; }
 
+/* Table rows from the canton's pages, rebuilt as a real table. Wide tables
+ * scroll inside their own container rather than widening the page. */
+.answer-table { margin: 0.6rem 0; overflow-x: auto; }
+.answer-table table {
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  white-space: normal;
+}
+.answer-table td {
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--dumi-line);
+  vertical-align: top;
+}
+.answer-table tr:first-child td {
+  font-weight: 600;
+  background: rgb(var(--dumi-ice-rgb) / 0.08);
+}
+
 /* --- feedback ------------------------------------------------------------ */
 .feedback {
   display: flex;

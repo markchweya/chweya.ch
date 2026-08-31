@@ -114,6 +114,37 @@ def _looks_like_chrome(node: Node) -> bool:
     return any(pattern in haystack for pattern in CHROME_PATTERNS)
 
 
+def _inside_table(node: Node) -> bool:
+    """Whether a node sits inside a table, whose text the row handling owns."""
+    parent = node.parent
+    while parent is not None:
+        if parent.tag == "table":
+            return True
+        parent = parent.parent
+    return False
+
+
+def _table_rows(table: Node) -> list[str]:
+    """Render a table's rows as text, one line per row.
+
+    Cells are joined with " | ", which keeps a row's values together through
+    chunking and retrieval. A holiday calendar or a fee schedule lives in a
+    table, and flattening it cell by cell into prose destroys exactly the
+    answer a resident asked for.
+    """
+    rows: list[str] = []
+    for row in table.css("tr"):
+        cells = [
+            _collapse_whitespace(cell.text()) for cell in row.css("th, td")
+        ]
+        cells = [cell for cell in cells if cell]
+        if len(cells) >= 2:
+            rows.append(" | ".join(cells))
+        elif cells and len(cells[0]) >= MIN_BLOCK_CHARACTERS:
+            rows.append(cells[0])
+    return rows
+
+
 def _collapse_whitespace(value: str) -> str:
     """Collapse runs of whitespace without touching the words themselves.
 
@@ -235,7 +266,27 @@ def extract_html(html: str, *, url: str | None = None) -> ExtractedPage:
     block_tags = set(BLOCK_TAGS)
     for node in container.traverse(include_text=False):
         tag = node.tag
+
+        # Tables are handled as rows, and anything inside one belongs to its
+        # row: without the guard a paragraph in a cell would appear twice,
+        # once in the row and once on its own.
+        if tag == "table":
+            if _inside_table(node):
+                continue
+            anchor = (node.attributes or {}).get("id")
+            for row_text in _table_rows(node):
+                page.blocks.append(
+                    ExtractedBlock(
+                        text=row_text,
+                        tag="tr",
+                        section_path=tuple(part for part in section_path if part),
+                        anchor=anchor or None,
+                    )
+                )
+            continue
         if tag not in block_tags:
+            continue
+        if _inside_table(node):
             continue
         text = _collapse_whitespace(node.text())
         if len(text) < MIN_BLOCK_CHARACTERS:

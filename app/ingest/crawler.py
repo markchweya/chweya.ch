@@ -68,6 +68,12 @@ HANDLED_TYPES = {
     "text/markdown": "text",
 }
 
+# Bumped when extraction changes what existing pages yield. The change
+# detector compares this alongside the content digest, so a crawl after an
+# extractor improvement re-processes every page even though the bytes are
+# unchanged. Version 2: tables are extracted as rows.
+EXTRACTION_VERSION = 2
+
 
 @dataclass
 class CrawlOutcome:
@@ -271,8 +277,10 @@ class Crawler:
             links = self._links_in_scope(html, url, source)
 
         # Unchanged content still costs a body when the server sends no
-        # validators, so the hash is the second line of defence.
-        digest = result.digest
+        # validators, so the hash is the second line of defence. The stored
+        # value carries the extraction version: unchanged bytes still need
+        # re-processing when the extractor learned to read something new.
+        digest = f"{result.digest}:v{EXTRACTION_VERSION}"
         if row.content_hash == digest:
             outcome.unchanged += 1
             self._touch_current_version(row)

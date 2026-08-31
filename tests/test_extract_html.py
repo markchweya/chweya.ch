@@ -89,6 +89,44 @@ class TestContentPreservation:
         assert "Krankenversicherungsnachweis" in blocks
 
 
+class TestTables:
+    """A holiday calendar or a fee schedule lives in a table. Dropping
+    tables, which the extractor did until version 2, dropped exactly the
+    answers residents ask for most."""
+
+    HTML = """<html lang="de"><head><title>Ferienplan</title></head><body><main>
+    <h1>Ferienplan</h1>
+    <h2>Schuljahr 2026/27</h2>
+    <table id="ferien">
+      <tr><th>Ferien</th><th>Beginn</th><th>Ende</th></tr>
+      <tr><td>Herbstferien</td><td>03.10.2026</td><td>18.10.2026</td></tr>
+      <tr><td>Weihnachtsferien</td><td><p>24.12.2026</p></td><td>03.01.2027</td></tr>
+    </table>
+    <p>Alle Angaben gemaess kantonalem Ferienkalender und ohne Gewaehr fuer
+    kurzfristige Aenderungen der Schulleitung.</p>
+    </main></body></html>"""
+
+    def test_rows_are_extracted_with_their_cells_together(self) -> None:
+        blocks = [b.text for b in extract_html(self.HTML).blocks]
+        assert "Ferien | Beginn | Ende" in blocks
+        assert "Herbstferien | 03.10.2026 | 18.10.2026" in blocks
+
+    def test_a_paragraph_inside_a_cell_is_not_extracted_twice(self) -> None:
+        blocks = [b.text for b in extract_html(self.HTML).blocks]
+        assert "Weihnachtsferien | 24.12.2026 | 03.01.2027" in blocks
+        assert "24.12.2026" not in blocks, "the cell belongs to its row only"
+
+    def test_rows_carry_the_section_trail_and_anchor(self) -> None:
+        page = extract_html(self.HTML)
+        row = next(b for b in page.blocks if "Herbstferien" in b.text)
+        assert row.tag == "tr"
+        assert row.section_path == ("Ferienplan", "Schuljahr 2026/27")
+        assert row.anchor == "ferien"
+
+    def test_prose_after_the_table_still_extracts(self) -> None:
+        assert "ohne Gewaehr" in extract_html(self.HTML).text
+
+
 class TestCitationAnchors:
     def test_section_path_tracks_heading_nesting(self) -> None:
         page = extract_html(PAGE)

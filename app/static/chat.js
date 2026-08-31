@@ -207,6 +207,58 @@
     body.appendChild(section);
   }
 
+  // The final answer is plain text with one recognised structure:
+  // consecutive lines whose cells are separated by " | " become a real
+  // table, because holiday dates and fee schedules arrive from the canton's
+  // pages as rows and a wall of pipe characters is unreadable. Every cell
+  // is written with textContent; nothing the model wrote is rendered as
+  // HTML.
+  function isTableRow(line) {
+    return line.indexOf(" | ") !== -1;
+  }
+
+  function buildTable(rows) {
+    var wrap = document.createElement("div");
+    wrap.className = "answer-table";
+    var table = document.createElement("table");
+    rows.forEach(function (row) {
+      var tr = document.createElement("tr");
+      row.split(" | ").forEach(function (cell) {
+        var td = document.createElement("td");
+        td.textContent = cell.trim();
+        tr.appendChild(td);
+      });
+      table.appendChild(tr);
+    });
+    wrap.appendChild(table);
+    return wrap;
+  }
+
+  function renderAnswerText(target, text) {
+    target.textContent = "";
+    var lines = text.split("\n");
+    var i = 0;
+    while (i < lines.length) {
+      if (isTableRow(lines[i])) {
+        var rows = [];
+        while (i < lines.length && isTableRow(lines[i])) {
+          rows.push(lines[i]);
+          i += 1;
+        }
+        target.appendChild(buildTable(rows));
+      } else {
+        var prose = [];
+        while (i < lines.length && !isTableRow(lines[i])) {
+          prose.push(lines[i]);
+          i += 1;
+        }
+        var paragraph = document.createElement("div");
+        paragraph.textContent = prose.join("\n");
+        target.appendChild(paragraph);
+      }
+    }
+  }
+
   // One transient confirmation, reused by every toast. role="status" so the
   // thanks is announced as well as shown. No animation: it appears, waits,
   // and leaves.
@@ -333,7 +385,7 @@
       shell.ensureBody();
       // Authoritative: invented citation markers are stripped server-side
       // only in this text, so it replaces whatever was streamed.
-      shell.text.textContent = payload.text || "";
+      renderAnswerText(shell.text, payload.text || "");
       if (payload.confidence) {
         shell.article.setAttribute("data-confidence", payload.confidence);
       }

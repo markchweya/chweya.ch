@@ -258,6 +258,21 @@ class TestPersistence:
         assert second.versions_created == 0
         assert second.urls_unchanged >= 2
 
+    async def test_a_new_extraction_version_reprocesses_unchanged_pages(self, db, crawl_env, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """Improving the extractor must reach pages already crawled. Their
+        bytes have not changed, so without the version in the change
+        detector they would keep their old extraction forever."""
+        from app.ingest import crawler as crawler_module
+
+        source, site, crawler, fetcher = crawl_env()
+        await crawler.run(source)
+
+        monkeypatch.setattr(crawler_module, "EXTRACTION_VERSION", crawler_module.EXTRACTION_VERSION + 1)
+        run = await crawler.run(source)
+        await fetcher.aclose()
+
+        assert run.versions_created > 0, "unchanged bytes still re-extract"
+
     async def test_a_paused_source_is_not_crawled(self, db, crawl_env) -> None:  # type: ignore[no-untyped-def]
         source, site, crawler, fetcher = crawl_env()
         source.is_paused = True
