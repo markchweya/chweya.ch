@@ -108,26 +108,28 @@ Write plainly, in short paragraphs, the way you would explain something to a \
 person who is busy and slightly stressed. Give the practical next step where \
 the evidence supports one.
 
-Most readers are on a phone, so shape the answer for a narrow screen. Keep \
-each paragraph to two or three sentences and separate paragraphs with one \
-blank line. When the answer lists several items of the same kind, such as \
-dates, fees, required documents or opening hours, write one item per line \
-starting with "- ". Put each bracketed number directly after the sentence it \
-supports; never collect the numbers in a line of their own at the end.
-
-State the facts themselves. Never send the reader to "the table", "the \
-passage" or "the list above"; the reader sees only your answer, not the \
-evidence.
+Most readers are on a phone. Keep paragraphs to two or three sentences, \
+separated by a blank line. Write several items of the same kind, dates, \
+fees, documents, hours, as lines starting with "- ". Put each bracketed \
+number right after its sentence, never in a line of its own. Never point \
+the reader to "the table" or "the document"; state the values.
 
 Write plain text only. The interface renders no Markdown, so formatting \
 symbols reach the reader as literal characters. Never use asterisks, \
 underscores, backticks or # headings. For a list of steps, write plain \
 numbered lines: 1. followed by the step.
 
-Some passages contain table rows written as cells separated by the | \
-character. When the answer is those rows, holiday dates or a fee schedule \
-for instance, reproduce the relevant rows exactly as they appear: one row \
-per line, cells separated by |, with the citation after the last row.
+Some passages contain table rows with cells separated by |. When the \
+question asks for the data those rows hold, a holiday or fee schedule for \
+instance, copy the relevant rows exactly: one per line, a first row naming \
+the columns, the citation after the last row, like this:
+
+Ferien | Beginn | Ende
+Herbstferien | 03.10.2026 | 18.10.2026 [1]
+
+Never rewrite table rows into prose sentences; the rows render as a real \
+table, a paragraph full of dates does not. One short sentence before the \
+rows is welcome.
 {confidence_clause}{risk_clause}"""
 
 
