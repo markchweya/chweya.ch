@@ -67,7 +67,10 @@ EXCLUDED_PATH_PATTERNS = (
     # is how this CMS serves the actual file behind a document link, so
     # blocking it would silently drop every linked PDF.
     re.compile(r"@@(?!download(?=[/?]|$))"),
-    re.compile(r"/[\w-]*_view" + SEGMENT_END, re.IGNORECASE),
+    # Only the widget views actually observed on zg.ch. A broad *_view
+    # pattern also matched names like file_view, which old CMS sites use for
+    # the page behind a document, and silently dropped those documents.
+    re.compile(r"/(feedback_view|addressblock_detail_view)" + SEGMENT_END, re.IGNORECASE),
     re.compile(r"/export_pdf" + SEGMENT_END, re.IGNORECASE),
     # Interactive form endpoints, which are applications, not content.
     re.compile(r"/aforms-formular" + SEGMENT_END, re.IGNORECASE),

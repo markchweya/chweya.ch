@@ -224,7 +224,16 @@ class GuardedFetcher:
 
         decision = evaluate(url, settings.allowed_hosts)
         if not decision.allowed:
-            logger.info("crawl.blocked", reason=decision.reason, url_host=_host_of(url))
+            # The path is logged as well as the host: a block on a redirect
+            # target is otherwise undiagnosable, because the original URL
+            # never shows what it redirected to. Crawl targets are public
+            # pages, so the path carries nothing personal.
+            logger.info(
+                "crawl.blocked",
+                reason=decision.reason,
+                url_host=_host_of(url),
+                url_path=urlsplit(url).path[:300],
+            )
             return FetchResult(url=url, reason=decision.reason)
 
         target = decision.normalised

@@ -145,6 +145,9 @@ class TestEvaluate:
             "/behoerden/baudirektion/direktionssekretariat/einleitung",
             "/themen/interview-mit-der-vorsteherin",
             "/dokumente/ferienkalender.pdf",
+            # Old CMS sites put the page behind a document at file_view. A
+            # live crawl showed a broad *_view filter dropping those.
+            "/gemeinden/menzingen/formulare/hundereglement/file_view",
         ):
             assert evaluate(f"https://www.zug.ch{path}", ZUG).allowed, path
 
