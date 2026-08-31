@@ -253,6 +253,15 @@ class TestChatPage:
         assert 'id="hero"' not in html
         assert 'class="suggestion"' not in html
 
+    def test_asset_links_carry_a_version_stamp(self, client) -> None:  # type: ignore[no-untyped-def]
+        """New HTML against a visitor's cached old stylesheet renders broken
+        in ways no test catches. The stamp changes the URL when a file
+        changes, so no one needs to know what a hard refresh is."""
+        html = client.get("/").text
+        assert "/static/chat.css?v=" in html
+        assert "/static/chat.js?v=" in html
+        assert "/brand/dumi-mark.css?v=" in html
+
     def test_the_language_menu_offers_every_language_in_itself(self, client) -> None:  # type: ignore[no-untyped-def]
         """A native disclosure, so it works without any script. Each option
         is named in its own language, which is the one spelling every reader

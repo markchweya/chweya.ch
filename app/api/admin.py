@@ -21,6 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.assets import asset_version
 from app.db.models import (
     AuditAction,
     Chunk,
@@ -52,6 +53,7 @@ from app.security.sessions import create_session, revoke_all_for_user, revoke_se
 logger = get_logger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["asset_version"] = asset_version()
 
 
 def _language(request: Request) -> str:

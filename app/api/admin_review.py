@@ -22,6 +22,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.assets import asset_version
 from app.db.models import AuditAction, ContradictionFinding, ReviewState
 from app.db.session import db_session
 from app.i18n import STRINGS, negotiate_language, t
@@ -34,6 +35,7 @@ from app.security.auth import CurrentUser, Permission, require
 logger = get_logger(__name__)
 router = APIRouter(prefix="/admin/review", tags=["admin", "review"])
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["asset_version"] = asset_version()
 
 
 def _language(request: Request) -> str:

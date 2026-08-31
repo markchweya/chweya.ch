@@ -27,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import SUPPORTED_LANGUAGES, get_settings
+from app.assets import asset_version
 from app.db.models import (
     Chunk,
     Document,
@@ -46,6 +47,7 @@ from app.uploads.pipeline import DocumentMetadata
 logger = get_logger(__name__)
 router = APIRouter(prefix="/admin/uploads", tags=["admin", "uploads"])
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["asset_version"] = asset_version()
 
 # Read this much at a time. Large enough that a fifty megabyte PDF does not
 # cost thousands of iterations, small enough that a single read cannot commit

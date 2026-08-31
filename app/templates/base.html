@@ -19,9 +19,11 @@
   <link rel="apple-touch-icon" href="/brand/favicon/apple-touch-icon.png">
   <meta name="theme-color" content="#0B3B57">
 
-  <link rel="stylesheet" href="/brand/dumi-tokens.css">
-  <link rel="stylesheet" href="/brand/dumi-mark.css">
-  <link rel="stylesheet" href="/static/chat.css">
+  {# The version stamp changes whenever an asset file changes, so a browser
+     never renders new HTML against its cached old stylesheet. #}
+  <link rel="stylesheet" href="/brand/dumi-tokens.css?v={{ asset_version }}">
+  <link rel="stylesheet" href="/brand/dumi-mark.css?v={{ asset_version }}">
+  <link rel="stylesheet" href="/static/chat.css?v={{ asset_version }}">
 </head>
 <body>
   {# Skip link, first in the tab order, visible on focus. #}
