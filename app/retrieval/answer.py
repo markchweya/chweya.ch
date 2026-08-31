@@ -331,6 +331,20 @@ def validate_citations(text: str, available: int) -> tuple[str, list[int], list[
     return cleaned.strip(), kept, invented
 
 
+# A line holding nothing but citation markers, the way a small model sometimes
+# signs off: "[1] [2] [3] [4]". By the time layout runs the markers have been
+# counted, and a row of bare numbers on screen tells the reader nothing the
+# sources block does not.
+_MARKER_ONLY_LINE = re.compile(r"^[ \t]*(?:\[\d{1,2}\][ \t.,;]*)+$\n?", re.MULTILINE)
+
+
+def tidy_layout(text: str) -> str:
+    """Drop marker-only lines and collapse runs of blank lines."""
+    text = _MARKER_ONLY_LINE.sub("", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
 def _notices_for(assessment: EvidenceAssessment) -> list[str]:
     """Message keys the interface must display alongside the answer."""
     notices: list[str] = []
@@ -491,6 +505,7 @@ def finalise_answer(text: str, was_truncated: bool, prepared: PreparedAnswer) ->
     cleaned, kept, invented = validate_citations(
         strip_markup(text), len(prompt.cited_chunks)
     )
+    cleaned = tidy_layout(cleaned)
 
     if invented:
         logger.warning(

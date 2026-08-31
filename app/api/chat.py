@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 from app.api.ratelimit import FixedWindowLimiter, client_key
 from app.config import get_settings
 from app.assets import asset_version
+from app.retrieval.layout import answer_blocks
 from app.db.session import db_session
 from app.i18n import SUPPORTED_LANGUAGES, negotiate_language, normalise_language, t
 from app.llm.apertus import ApertusProvider
@@ -43,6 +44,7 @@ router = APIRouter(tags=["chat"])
 
 templates = Jinja2Templates(directory="app/templates")
 templates.env.globals["asset_version"] = asset_version()
+templates.env.filters["answer_blocks"] = answer_blocks
 
 # Each language named in itself, which is the one spelling every reader of
 # that language recognises. Translating the names would defeat the point.

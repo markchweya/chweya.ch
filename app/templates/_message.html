@@ -19,7 +19,33 @@
         </p>
       {% endfor %}
 
-      <div class="msg__text">{{ message.text }}</div>
+      {# The answer arrives as plain text whose only structure is line-based.
+         Rendering it as real paragraphs, lists and tables is what makes a
+         long answer readable on a phone; a single pre-wrapped block reads as
+         a wall. The script applies the same rules to streamed answers. #}
+      <div class="msg__text msg__text--blocks">
+        {% for block in message.text | answer_blocks %}
+          {% if block.kind == 'paragraph' %}
+            <p>{{ block.text }}</p>
+          {% elif block.kind == 'list' %}
+            <ul>
+              {% for entry in block.entries %}<li>{{ entry }}</li>{% endfor %}
+            </ul>
+          {% elif block.kind == 'steps' %}
+            <ol{% if block.start > 1 %} start="{{ block.start }}"{% endif %}>
+              {% for entry in block.entries %}<li>{{ entry }}</li>{% endfor %}
+            </ol>
+          {% elif block.kind == 'table' %}
+            <div class="answer-table">
+              <table>
+                {% for row in block.rows %}
+                  <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                {% endfor %}
+              </table>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
 
       {% if message.citations %}
         {# Collapsed by default. The bracketed markers in the answer say which

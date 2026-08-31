@@ -234,11 +234,25 @@
     return wrap;
   }
 
+  // Lines starting "1." or "1)" are steps and become a real ordered list.
+  var STEP_LINE = /^\d{1,2}[.)]\s+/;
+
+  // The final answer is rendered as blocks, mirroring the server template:
+  // blank lines separate paragraphs, "- " lines become a list, numbered
+  // lines become steps, and " | " rows become a table. This is what makes a
+  // long answer readable on a phone instead of a wall of text.
   function renderAnswerText(target, text) {
     target.textContent = "";
+    target.classList.add("msg__text--blocks");
     var lines = text.split("\n");
     var i = 0;
+
+    function isBullet(line) {
+      return line.trim().indexOf("- ") === 0;
+    }
+
     while (i < lines.length) {
+      var stripped = lines[i].trim();
       if (isTableRow(lines[i])) {
         var rows = [];
         while (i < lines.length && isTableRow(lines[i])) {
@@ -246,15 +260,43 @@
           i += 1;
         }
         target.appendChild(buildTable(rows));
-      } else {
-        var prose = [];
-        while (i < lines.length && !isTableRow(lines[i])) {
-          prose.push(lines[i]);
+      } else if (isBullet(lines[i])) {
+        var list = document.createElement("ul");
+        while (i < lines.length && isBullet(lines[i])) {
+          var item = document.createElement("li");
+          item.textContent = lines[i].trim().slice(2).trim();
+          list.appendChild(item);
           i += 1;
         }
-        var paragraph = document.createElement("div");
-        paragraph.textContent = prose.join("\n");
+        target.appendChild(list);
+      } else if (STEP_LINE.test(stripped)) {
+        var steps = document.createElement("ol");
+        var first = parseInt(stripped, 10);
+        if (first > 1) {
+          steps.setAttribute("start", String(first));
+        }
+        while (i < lines.length && STEP_LINE.test(lines[i].trim())) {
+          var step = document.createElement("li");
+          step.textContent = lines[i].trim().replace(STEP_LINE, "");
+          steps.appendChild(step);
+          i += 1;
+        }
+        target.appendChild(steps);
+      } else if (stripped) {
+        var prose = [];
+        while (i < lines.length) {
+          var line = lines[i].trim();
+          if (!line || isTableRow(lines[i]) || isBullet(lines[i]) || STEP_LINE.test(line)) {
+            break;
+          }
+          prose.push(line);
+          i += 1;
+        }
+        var paragraph = document.createElement("p");
+        paragraph.textContent = prose.join(" ");
         target.appendChild(paragraph);
+      } else {
+        i += 1;
       }
     }
   }

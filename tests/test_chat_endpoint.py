@@ -368,6 +368,49 @@ class TestAnswering:
         assert payload["is_refusal"]
         assert "nicht erreichbar" in payload["text"]
 
+    def test_a_trailing_line_of_bare_markers_never_reaches_the_screen(self, client) -> None:  # type: ignore[no-untyped-def]
+        """A small model sometimes signs off with a row of bare citation
+        numbers. The markers count for validation, then the line goes."""
+        client.stub.text = "Die Anmeldung kostet 20 Franken [1].\n\n[1]"
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert payload["text"] == "Die Anmeldung kostet 20 Franken [1]."
+        assert not payload["is_refusal"]
+
+    def test_the_page_renders_an_answer_as_paragraphs_and_lists(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The no-JavaScript page renders the answer's line structure as real
+        elements: paragraphs, lists, steps. A wall of text is unreadable on a
+        phone."""
+        client.stub.text = (
+            "Die Anmeldung ist einfach [1].\n\n"
+            "- Pass [1]\n- Mietvertrag [1]\n\n"
+            "1. Formular senden [1]\n2. Termin abwarten [1]"
+        )
+        html = client.post(
+            "/ask", data={"question": "Was kostet die Anmeldung?", "lang": "de"}
+        ).text
+        assert "<p>Die Anmeldung ist einfach [1].</p>" in html
+        assert "<li>Pass [1]</li>" in html
+        assert "<li>Mietvertrag [1]</li>" in html
+        assert "<ol>" in html
+        assert "<li>Formular senden [1]</li>" in html
+
+    def test_the_page_renders_pipe_rows_as_a_table(self, client) -> None:  # type: ignore[no-untyped-def]
+        client.stub.text = (
+            "Die Daten stehen fest [1].\n\n"
+            "Herbstferien | 05.10.2026 | 16.10.2026\n"
+            "Sportferien | 06.02.2027 | 21.02.2027"
+        )
+        html = client.post(
+            "/ask", data={"question": "Was kostet die Anmeldung?", "lang": "de"}
+        ).text
+        assert 'class="answer-table"' in html
+        assert "<td>Herbstferien</td>" in html
+        assert "<td>21.02.2027</td>" in html
+
     def test_an_answer_with_no_citations_is_withheld_and_the_sources_offered(self, client) -> None:  # type: ignore[no-untyped-def]
         """The prompt required citations and evidence was supplied, so the
         uncited text is withheld. What replaces it must be honest: pages were

@@ -240,6 +240,21 @@ body {
 
 .msg__text { white-space: pre-wrap; }
 
+/* A finished answer is rendered as real paragraphs, lists and tables. The
+ * modifier turns pre-wrap off because the markup now carries the structure
+ * and the whitespace between tags must not render. Streamed text, still a
+ * raw string, keeps the pre-wrap above until the final render replaces it. */
+.msg__text--blocks { white-space: normal; }
+.msg__text--blocks p { margin: 0 0 0.8em; }
+.msg__text--blocks ul,
+.msg__text--blocks ol {
+  margin: 0 0 0.8em;
+  padding-inline-start: 1.35em;
+}
+.msg__text--blocks li { margin-block: 0.35em; }
+.msg__text--blocks li::marker { color: var(--dumi-ink-soft); }
+.msg__text--blocks > :last-child { margin-bottom: 0; }
+
 /* The waiting sentence beside the thinking mark. Static text with no
  * animation of its own: the mark's motion carries the state, this says it
  * in words. */
