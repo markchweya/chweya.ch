@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Dumi{% endblock %}
+{% block title %}Dumi Zug{% endblock %}
 
 {% block body %}
 <header class="bar">
   <span class="dumi-lockup">
     {% include "_mark.html" %}
-    Dumi
+    Dumi <span class="dumi-lockup__canton">Zug</span>
   </span>
 
   <div class="bar__controls">
@@ -52,7 +52,7 @@
    remains in the string table and in the page footer of the docs; nothing
    else in the product claims official status. #}
 <main id="main" class="chat{% if not messages %} chat--welcome{% endif %}">
-  <h1 class="visually-hidden">Dumi</h1>
+  <h1 class="visually-hidden">Dumi Zug</h1>
 
   {# The welcome state: the mark, one honest sentence about what this is,
      and the composer in the middle of the page. It exists only while the

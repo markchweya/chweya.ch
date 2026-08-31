@@ -171,6 +171,13 @@ class TestChatPage:
     def test_the_page_renders(self, client) -> None:  # type: ignore[no-untyped-def]
         assert client.get("/").status_code == 200
 
+    def test_the_header_names_the_canton(self, client) -> None:  # type: ignore[no-untyped-def]
+        """Dumi serves one canton per deployment, and the header says which.
+        The canton name alone: the page still claims no official status."""
+        html = client.get("/").text
+        assert '<span class="dumi-lockup__canton">Zug</span>' in html
+        assert "<title>Dumi Zug</title>" in html
+
     def test_the_page_makes_no_official_claim(self, client) -> None:  # type: ignore[no-untyped-def]
         """The section 22 disclosure banner was removed from this page at the
         project owner's direction (recorded in docs/known-limitations.md).

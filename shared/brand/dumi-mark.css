@@ -224,6 +224,13 @@
 
 .dumi-lockup .dumi { --dumi-size: 1.55em; }
 
+/* The canton a deployment serves, at full size beside the name: "Dumi Zug"
+ * reads as one name for one canton's assistant. The colour is the flow
+ * token, which a canton folder may override with its accent. */
+.dumi-lockup__canton {
+  color: var(--dumi-flow);
+}
+
 /* "Beta", "Preview" and the like. Never competes with the name. */
 .dumi-lockup__tag {
   font-family: var(--dumi-font-body);
