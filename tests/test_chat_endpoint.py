@@ -227,6 +227,12 @@ class TestChatPage:
         assert 'for="question"' in html
         assert 'id="question"' in html
 
+    def test_the_status_region_is_for_assistive_technology_only(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The waiting sentence is shown beside the mark. The status region
+        announces it; rendering it too put the sentence on the page twice."""
+        html = client.get("/").text
+        assert 'id="status" class="visually-hidden"' in html
+
     def test_the_transcript_is_a_live_region(self, client) -> None:  # type: ignore[no-untyped-def]
         """Otherwise a streamed answer is never announced."""
         html = client.get("/").text

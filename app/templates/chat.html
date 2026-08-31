@@ -152,9 +152,10 @@
     </nav>
   {% endif %}
 
-  {# Status for assistive technology. The Dumi mark carries the same state
-     visually; this carries it for anyone not looking at the mark. #}
-  <p id="status" class="status" role="status" aria-live="polite"></p>
+  {# Status for assistive technology only. The mark and the sentence beside
+     it carry the same state visually; rendering this too put the sentence
+     on the page twice. #}
+  <p id="status" class="visually-hidden" role="status" aria-live="polite"></p>
 </main>
 {% endblock %}
 
