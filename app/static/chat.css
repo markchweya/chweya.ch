@@ -376,6 +376,15 @@ html:has(#transcript)::-webkit-scrollbar { display: none; }
   background: rgb(var(--dumi-ice-rgb) / 0.03);
 }
 
+/* The two-column variant built from "Label: value" items: the labels are
+ * row headers down the first column, so there is no header row to tint. */
+.answer-table--pairs th {
+  background: rgb(var(--dumi-ice-rgb) / 0.06);
+  white-space: nowrap;
+}
+.answer-table--pairs tr + tr th { border-top: 1px solid var(--dumi-line); }
+.answer-table--pairs td { width: 100%; }
+
 /* --- feedback ------------------------------------------------------------ */
 .feedback {
   display: flex;

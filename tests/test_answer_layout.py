@@ -73,6 +73,31 @@ class TestAnswerBlocks:
             {"kind": "paragraph", "text": "2026. Das ist eine Jahreszahl."}
         ]
 
+    def test_a_list_of_labelled_values_becomes_a_pairs_table(self) -> None:
+        """Tabular data wearing bullets: every item is "Label: value"."""
+        blocks = answer_blocks(
+            "- Herbstferien: Sa 03.10.2026 - So 18.10.2026\n"
+            "- Sportferien: Sa 06.02.2027 - So 21.02.2027"
+        )
+        assert blocks == [
+            {
+                "kind": "pairs",
+                "rows": [
+                    ["Herbstferien", "Sa 03.10.2026 - So 18.10.2026"],
+                    ["Sportferien", "Sa 06.02.2027 - So 21.02.2027"],
+                ],
+            }
+        ]
+
+    def test_a_list_with_one_unlabelled_item_stays_a_list(self) -> None:
+        blocks = answer_blocks("- Herbstferien: 03.10.2026\n- Mietvertrag")
+        assert blocks[0]["kind"] == "list"
+
+    def test_a_single_labelled_item_stays_a_list(self) -> None:
+        """One row is not a table."""
+        blocks = answer_blocks("- Herbstferien: 03.10.2026")
+        assert blocks[0]["kind"] == "list"
+
     def test_a_mixed_answer_keeps_its_order(self) -> None:
         text = (
             "Die Ferien stehen fest [1].\n\n"

@@ -17,6 +17,12 @@ import re
 
 STEP_LINE = re.compile(r"^\d{1,2}[.)]\s+")
 
+# A list item shaped "Label: value". When every item of a list has this
+# shape, the list is a table wearing bullets: the model was asked for rows
+# and reached for "Herbstferien: 03.10. - 18.10." instead. The split is
+# deterministic, so rendering it as a two-column table loses nothing.
+LABELED_ITEM = re.compile(r"^([^:]{2,40}):\s+(.+)$")
+
 
 def _is_table_row(line: str) -> bool:
     return " | " in line
@@ -57,7 +63,16 @@ def answer_blocks(text: str) -> list[dict[str, object]]:
             while i < len(lines) and lines[i].strip().startswith("- "):
                 entries.append(lines[i].strip()[2:].strip())
                 i += 1
-            blocks.append({"kind": "list", "entries": entries})
+            labeled = [LABELED_ITEM.match(entry) for entry in entries]
+            if len(entries) >= 2 and all(labeled):
+                blocks.append(
+                    {
+                        "kind": "pairs",
+                        "rows": [[m.group(1), m.group(2)] for m in labeled],  # type: ignore[union-attr]
+                    }
+                )
+            else:
+                blocks.append({"kind": "list", "entries": entries})
             continue
 
         if STEP_LINE.match(stripped):

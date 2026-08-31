@@ -414,6 +414,22 @@ class TestAnswering:
         assert "<td>Herbstferien</td>" in html
         assert "<td>21.02.2027</td>" in html
 
+    def test_the_page_renders_a_labelled_list_as_a_two_column_table(self, client) -> None:  # type: ignore[no-untyped-def]
+        """A list whose every item is "Label: value" is tabular data wearing
+        bullets, the shape the model reaches for when it dodges pipe rows."""
+        client.stub.text = (
+            "Die Ferien stehen fest [1].\n\n"
+            "- Herbstferien: Sa 03.10.2026 - So 18.10.2026\n"
+            "- Sportferien: Sa 06.02.2027 - So 21.02.2027"
+        )
+        html = client.post(
+            "/ask", data={"question": "Was kostet die Anmeldung?", "lang": "de"}
+        ).text
+        assert "answer-table--pairs" in html
+        assert '<th scope="row">Herbstferien</th>' in html
+        assert "<td>Sa 06.02.2027 - So 21.02.2027</td>" in html
+        assert "<ul>" not in html
+
     def test_a_prose_schedule_is_retried_and_the_rows_shown(self, client, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         """The model flattened table rows into a paragraph of dates. One
         corrective turn asks for the rows; the corrected answer is shown."""

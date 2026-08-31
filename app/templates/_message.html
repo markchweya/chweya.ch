@@ -35,6 +35,17 @@
             <ol{% if block.start > 1 %} start="{{ block.start }}"{% endif %}>
               {% for entry in block.entries %}<li>{{ entry }}</li>{% endfor %}
             </ol>
+          {% elif block.kind == 'pairs' %}
+            {# A list whose every item was "Label: value" is tabular data
+               wearing bullets; it renders as a two-column table with the
+               labels as row headers. #}
+            <div class="answer-table answer-table--pairs">
+              <table>
+                {% for row in block.rows %}
+                  <tr><th scope="row">{{ row[0] }}</th><td>{{ row[1] }}</td></tr>
+                {% endfor %}
+              </table>
+            </div>
           {% elif block.kind == 'table' %}
             {# The first row is the header: the prompt asks the model to
                name the columns there, and the extractor's rows carry the

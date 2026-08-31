@@ -240,6 +240,9 @@
   // Lines starting "1." or "1)" are steps and become a real ordered list.
   var STEP_LINE = /^\d{1,2}[.)]\s+/;
 
+  // A list item shaped "Label: value", mirroring the server's rule.
+  var LABELED_ITEM = /^([^:]{2,40}):\s+(.+)$/;
+
   // The final answer is rendered as blocks, mirroring the server template:
   // blank lines separate paragraphs, "- " lines become a list, numbered
   // lines become steps, and " | " rows become a table. This is what makes a
@@ -264,14 +267,42 @@
         }
         target.appendChild(buildTable(rows));
       } else if (isBullet(lines[i])) {
-        var list = document.createElement("ul");
+        var entries = [];
         while (i < lines.length && isBullet(lines[i])) {
-          var item = document.createElement("li");
-          item.textContent = lines[i].trim().slice(2).trim();
-          list.appendChild(item);
+          entries.push(lines[i].trim().slice(2).trim());
           i += 1;
         }
-        target.appendChild(list);
+        // A list whose every item is "Label: value" is tabular data wearing
+        // bullets; render it as a two-column table, like the server does.
+        var pairs = entries.map(function (entry) {
+          return LABELED_ITEM.exec(entry);
+        });
+        if (entries.length >= 2 && pairs.every(Boolean)) {
+          var wrap = document.createElement("div");
+          wrap.className = "answer-table answer-table--pairs";
+          var pairTable = document.createElement("table");
+          pairs.forEach(function (match) {
+            var tr = document.createElement("tr");
+            var label = document.createElement("th");
+            label.setAttribute("scope", "row");
+            label.textContent = match[1];
+            var value = document.createElement("td");
+            value.textContent = match[2];
+            tr.appendChild(label);
+            tr.appendChild(value);
+            pairTable.appendChild(tr);
+          });
+          wrap.appendChild(pairTable);
+          target.appendChild(wrap);
+        } else {
+          var list = document.createElement("ul");
+          entries.forEach(function (entry) {
+            var item = document.createElement("li");
+            item.textContent = entry;
+            list.appendChild(item);
+          });
+          target.appendChild(list);
+        }
       } else if (STEP_LINE.test(stripped)) {
         var steps = document.createElement("ol");
         var first = parseInt(stripped, 10);

@@ -432,6 +432,26 @@ class TestTableRetry:
         prepared = _prepared(chunk(text=ROWS), chunk(title="B"))
         assert not needs_table_retry("NO_ANSWER", prepared)
 
+    def test_a_labelled_list_is_not_retried_because_it_renders_as_a_table(self) -> None:
+        """The renderer turns a list of "Label: value" items into a table,
+        so a second model call would buy nothing."""
+        prepared = _prepared(chunk(text=ROWS), chunk(title="B"))
+        labelled = (
+            "Die Ferien [1]:\n"
+            "- Herbstferien: Sa 03.10.2026 - So 18.10.2026\n"
+            "- Weihnachtsferien: Sa 19.12.2026 - So 03.01.2027"
+        )
+        assert not needs_table_retry(labelled, prepared)
+
+    def test_a_retry_that_answers_in_labelled_bullets_is_usable(self) -> None:
+        prepared = _prepared(chunk(text=ROWS), chunk(title="B"))
+        labelled = (
+            "Die Ferien [1]:\n"
+            "- Herbstferien: Sa 03.10.2026 - So 18.10.2026\n"
+            "- Weihnachtsferien: Sa 19.12.2026 - So 03.01.2027"
+        )
+        assert table_retry_usable(labelled, prepared)
+
     def test_a_cited_retry_with_rows_is_usable(self) -> None:
         prepared = _prepared(chunk(text=ROWS), chunk(title="B"))
         assert table_retry_usable("Die Ferien [1]:\n" + ROWS + " [1]", prepared)

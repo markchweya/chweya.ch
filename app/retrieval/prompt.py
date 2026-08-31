@@ -109,10 +109,10 @@ person who is busy and slightly stressed. Give the practical next step where \
 the evidence supports one.
 
 Most readers are on a phone. Keep paragraphs to two or three sentences, \
-separated by a blank line. Write several items of the same kind, dates, \
-fees, documents, hours, as lines starting with "- ". Put each bracketed \
-number right after its sentence, never in a line of its own. Never point \
-the reader to "the table" or "the document"; state the values.
+separated by a blank line. Write items of the same kind as "- " lines, but \
+data from table rows as | rows, never as bullets. Put each bracketed \
+number right after its sentence, never on a line of its own. Never point \
+to "the table" or "the document"; state the values.
 
 Write plain text only. The interface renders no Markdown, so formatting \
 symbols reach the reader as literal characters. Never use asterisks, \
@@ -127,9 +127,8 @@ the columns, the citation after the last row, like this:
 Ferien | Beginn | Ende
 Herbstferien | 03.10.2026 | 18.10.2026 [1]
 
-Never rewrite table rows into prose sentences; the rows render as a real \
-table, a paragraph full of dates does not. One short sentence before the \
-rows is welcome.
+Never rewrite table rows into prose or bullets; the rows render as a real \
+table. One short sentence before the rows is welcome.
 {confidence_clause}{risk_clause}"""
 
 

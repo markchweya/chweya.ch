@@ -37,6 +37,7 @@ from app.llm.base import (
 from app.observability import get_logger
 from app.retrieval.embeddings import EmbeddingProvider
 from app.retrieval.evidence import Confidence, EvidenceAssessment, RiskTopic, assess
+from app.retrieval.layout import answer_blocks
 from app.retrieval.prompt import BuiltPrompt, build_prompt, should_call_model
 from app.retrieval.search import search
 
@@ -314,7 +315,8 @@ _TABLE_CORRECTION = (
     "Your answer rewrote tabular data into prose sentences. Write it again "
     "using the table rows from the passages: one row per line, cells "
     "separated by |, a first row naming the columns, and the citation after "
-    "the last row. At most two short sentences around the rows."
+    "the last row. No prose sentences carrying the data and no bulleted "
+    "list; at most two short sentences around the rows."
 )
 
 _DATE_TOKEN = re.compile(r"\b\d{1,2}\.\s?\d{1,2}\.\d{2,4}\b")
@@ -326,16 +328,26 @@ def evidence_has_table_rows(prepared: PreparedAnswer) -> bool:
     return any(" | " in chunk.text for chunk in prepared.prompt.cited_chunks)
 
 
+def _renders_as_table(cleaned: str) -> bool:
+    """Whether the layout step will already show this text as a table.
+
+    Pipe rows do, and so does a list whose every item is "Label: value",
+    which the renderer turns into a two-column table.
+    """
+    kinds = {block["kind"] for block in answer_blocks(cleaned)}
+    return "table" in kinds or "pairs" in kinds
+
+
 def needs_table_retry(text: str, prepared: PreparedAnswer) -> bool:
     """Whether a response flattened supplied table rows into prose.
 
-    Triggers only when all three hold: the evidence contained rows, the
-    answer contains none, and the answer is dense with dates or amounts,
-    which is what flattened tabular data looks like. An ordinary prose
-    answer that happens to share a page with a table is left alone.
+    Triggers only when all three hold: the evidence contained rows, nothing
+    in the answer will render as a table, and the answer is dense with dates
+    or amounts, which is what flattened tabular data looks like. An ordinary
+    prose answer that happens to share a page with a table is left alone.
     """
     cleaned = strip_markup(text)
-    if is_no_answer(cleaned) or " | " in cleaned:
+    if is_no_answer(cleaned) or _renders_as_table(cleaned):
         return False
     if not evidence_has_table_rows(prepared):
         return False
@@ -349,12 +361,12 @@ def table_retry_usable(second_text: str, prepared: PreparedAnswer) -> bool:
     """Whether the corrected attempt should replace the first one.
 
     The first answer was cited and valid, only badly shaped. The retry
-    replaces it solely when it is a real improvement: it has rows, still
-    cites, and does not declare the evidence insufficient. Anything else
-    keeps the prose answer; readable is better than gone.
+    replaces it solely when it is a real improvement: it renders as a
+    table, still cites, and does not declare the evidence insufficient.
+    Anything else keeps the prose answer; readable is better than gone.
     """
     cleaned = strip_markup(second_text)
-    if is_no_answer(cleaned) or " | " not in cleaned:
+    if is_no_answer(cleaned) or not _renders_as_table(cleaned):
         return False
     return not needs_citation_retry(second_text, prepared)
 
