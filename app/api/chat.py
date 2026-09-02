@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 from app.api.ratelimit import FixedWindowLimiter, client_key
 from app.config import get_settings
 from app.assets import asset_version
+from app.cantons import CANTONS, Canton, get_canton, normalise_canton
 from app.retrieval.layout import answer_blocks
 from app.db.session import db_session
 from app.i18n import SUPPORTED_LANGUAGES, negotiate_language, normalise_language, t
@@ -79,30 +80,36 @@ def _language_for(request: Request, explicit: str | None) -> str:
     return negotiate_language(request.headers.get("Accept-Language"))
 
 
-def _template_context(request: Request, language: str, messages: list[ViewMessage]) -> dict[str, Any]:
+def _template_context(
+    request: Request, language: str, canton: Canton, messages: list[ViewMessage]
+) -> dict[str, Any]:
     return {
         "request": request,
         "language": language,
         "languages": LANGUAGE_LABELS,
+        "canton": canton,
+        "cantons": list(CANTONS.values()),
         "messages": messages,
         # Bound so templates call t('key') without threading the language
-        # through every call site.
-        "t": lambda key: t(key, language),
+        # and canton through every call site.
+        "t": lambda key: t(key, language, canton=canton),
     }
 
 
 @router.get("/", response_class=HTMLResponse)
-def chat_page(request: Request, lang: str | None = None) -> HTMLResponse:
+def chat_page(
+    request: Request, lang: str | None = None, canton: str | None = None
+) -> HTMLResponse:
     """Render the empty chat surface."""
     language = _language_for(request, lang)
     return templates.TemplateResponse(
         request=request,
         name="chat.html",
-        context=_template_context(request, language, []),
+        context=_template_context(request, language, get_canton(canton), []),
     )
 
 
-def _answer_payload(answer: Answer, language: str) -> dict[str, Any]:
+def _answer_payload(answer: Answer, language: str, canton: Canton) -> dict[str, Any]:
     """Shape an answer for the JSON surface."""
     return {
         "text": answer.text,
@@ -125,7 +132,10 @@ def _answer_payload(answer: Answer, language: str) -> dict[str, Any]:
             }
             for citation in answer.citations
         ],
-        "notices": [{"key": key, "text": t(key, language)} for key in answer.notices],
+        "notices": [
+            {"key": key, "text": t(key, language, canton=canton)}
+            for key in answer.notices
+        ],
         "labels": {
             "sources": t("answer.sources", language),
             "source_language": t("answer.source_language_note", language),
@@ -212,6 +222,7 @@ def _stream_response(
     session: Session,
     question: str,
     language: str,
+    canton: str,
     llm: LLMProvider,
     embedder: EmbeddingProvider,
     settings,  # type: ignore[no-untyped-def]
@@ -238,10 +249,16 @@ def _stream_response(
                     llm,
                     question,
                     language=language,
+                    canton=canton,
                     max_context_tokens=settings.apertus_max_context_tokens,
                     max_output_tokens=settings.apertus_max_output_tokens,
                 )
-                yield _sse({"type": "final", "payload": _answer_payload(answer, language)})
+                yield _sse(
+                    {
+                        "type": "final",
+                        "payload": _answer_payload(answer, language, get_canton(canton)),
+                    }
+                )
                 return
 
             async for kind, item in stream_answer(
@@ -250,6 +267,7 @@ def _stream_response(
                 llm,
                 question,
                 language=language,
+                canton=canton,
                 max_context_tokens=settings.apertus_max_context_tokens,
                 max_output_tokens=settings.apertus_max_output_tokens,
             ):
@@ -257,7 +275,12 @@ def _stream_response(
                     yield _sse({"type": "delta", "text": item})
                 else:
                     answer = item  # type: ignore[assignment]
-                    yield _sse({"type": "final", "payload": _answer_payload(answer, language)})
+                    yield _sse(
+                        {
+                            "type": "final",
+                            "payload": _answer_payload(answer, language, get_canton(canton)),
+                        }
+                    )
         finally:
             if answer is not None:
                 # The question text is never logged; section 18.
@@ -291,6 +314,7 @@ async def _produce_answer(
     session: Session,
     question: str,
     language: str,
+    canton: str,
     llm: LLMProvider,
     embedder: EmbeddingProvider,
 ) -> Answer:
@@ -303,6 +327,7 @@ async def _produce_answer(
             llm,
             question,
             language=language,
+            canton=canton,
             max_context_tokens=settings.apertus_max_context_tokens,
             max_output_tokens=settings.apertus_max_output_tokens,
         )
@@ -318,6 +343,7 @@ async def ask(
     session: Session = Depends(db_session),
     question: str = Form(default=""),
     lang: str = Form(default=""),
+    canton: str = Form(default=""),
     llm: LLMProvider = Depends(get_llm_provider),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
 ) -> Any:
@@ -335,8 +361,10 @@ async def ask(
             body = {}
         question = str(body.get("question", ""))
         lang = str(body.get("lang", ""))
+        canton = str(body.get("canton", ""))
 
     language = _language_for(request, lang or None)
+    canton_slug = normalise_canton(canton or None)
 
     limiter = _limiter_for(settings.rate_limit_chat_per_minute)
     decision = limiter.check(client_key(request.client.host if request.client else None))
@@ -353,16 +381,23 @@ async def ask(
             request=request,
             name="chat.html",
             context=_template_context(
-                request, language, [ViewMessage(role="bot", text=message)]
+                request,
+                language,
+                get_canton(canton_slug),
+                [ViewMessage(role="bot", text=message)],
             ),
             status_code=429,
             headers={"Retry-After": str(decision.retry_after_seconds)},
         )
 
     if wants_stream:
-        return _stream_response(session, question.strip(), language, llm, embedder, settings)
+        return _stream_response(
+            session, question.strip(), language, canton_slug, llm, embedder, settings
+        )
 
-    answer = await _produce_answer(session, question.strip(), language, llm, embedder)
+    answer = await _produce_answer(
+        session, question.strip(), language, canton_slug, llm, embedder
+    )
 
     # The question text is never logged. Section 18 forbids it, and an
     # operational log should not become a record of what residents asked.
@@ -376,7 +411,7 @@ async def ask(
     )
 
     if wants_json:
-        return JSONResponse(_answer_payload(answer, language))
+        return JSONResponse(_answer_payload(answer, language, get_canton(canton_slug)))
 
     messages = [
         ViewMessage(role="user", text=question.strip()),
@@ -391,7 +426,7 @@ async def ask(
     return templates.TemplateResponse(
         request=request,
         name="chat.html",
-        context=_template_context(request, language, messages),
+        context=_template_context(request, language, get_canton(canton_slug), messages),
     )
 
 
@@ -443,6 +478,7 @@ async def feedback(
         AnswerFeedback(
             vote=vote,
             language=normalise_language(str(body.get("language", ""))),
+            canton=normalise_canton(str(body.get("canton", "")) or None),
             confidence=confidence,
             is_refusal=bool(body.get("is_refusal", False)),
             citation_urls=urls,

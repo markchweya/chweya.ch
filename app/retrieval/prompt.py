@@ -27,6 +27,7 @@ from __future__ import annotations
 import secrets
 from dataclasses import dataclass
 
+from app.cantons import Canton, get_canton
 from app.llm.base import ChatMessage, GenerationRequest, Role
 from app.retrieval.evidence import Confidence, EvidenceAssessment
 from app.retrieval.search import RetrievedChunk
@@ -50,9 +51,9 @@ def _new_delimiter() -> str:
 
 SYSTEM_TEMPLATE = """\
 You are Dumi, an assistant that answers questions about public information \
-published by the Canton of Zug in Switzerland. You are an unofficial \
-prototype. You are not operated or endorsed by the Canton of Zug, and you \
-have no authority to decide anything.
+published by the Canton of {canton_en} in Switzerland. You are an unofficial \
+prototype. You are not operated or endorsed by the Canton of {canton_en}, \
+and you have no authority to decide anything.
 
 HOW TO USE THE EVIDENCE
 
@@ -215,6 +216,7 @@ def build_prompt(
     assessment: EvidenceAssessment,
     *,
     answer_language: str = "de",
+    canton: Canton | None = None,
     max_context_tokens: int = 8192,
     answer_reserve_tokens: int = DEFAULT_ANSWER_RESERVE_TOKENS,
     estimate_tokens=None,  # type: ignore[no-untyped-def]
@@ -242,6 +244,7 @@ def build_prompt(
     system_text = SYSTEM_TEMPLATE.format(
         delimiter=delimiter,
         language_name=language_name,
+        canton_en=(canton or get_canton()).name("en"),
         confidence_clause=CONFIDENCE_CLAUSES.get(assessment.confidence, ""),
         risk_clause=risk_clause,
     )

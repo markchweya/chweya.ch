@@ -299,6 +299,13 @@ def dashboard(
     )
 
 
+def _canton_options():  # type: ignore[no-untyped-def]
+    """The cantons a source can belong to, for the creation form."""
+    from app.cantons import CANTONS
+
+    return list(CANTONS.values())
+
+
 @router.get("/sources", response_class=HTMLResponse)
 def sources_page(
     request: Request,
@@ -340,6 +347,7 @@ def sources_page(
             who=who,
             sources=sources,
             latest_runs=latest_runs,
+            cantons=_canton_options(),
             allowed_hosts=get_settings().allowed_hosts,
             message=t(message, language) if message and message in STRINGS else "",
             problems=shown_problems,
@@ -354,6 +362,7 @@ def create_source(
     who: CurrentUser = Depends(require(Permission.MANAGE_SOURCES)),
     name: str = Form(""),
     base_url: str = Form(""),
+    canton: str = Form(""),
     default_language: str = Form("de"),
     department: str = Form(""),
     excluded_paths: str = Form(""),
@@ -367,6 +376,7 @@ def create_source(
     """
     from urllib.parse import urlsplit
 
+    from app.cantons import CANTONS, get_canton
     from app.ingest.urls import host_matches_allowlist, normalise
 
     settings = get_settings()
@@ -376,6 +386,12 @@ def create_source(
     if len(name) < 2:
         problems.append("source.name_required")
 
+    # An unknown canton is rejected rather than defaulted: a source filed
+    # under the wrong canton leaks its pages into that canton's answers.
+    canton = canton.strip().lower()
+    if canton not in CANTONS:
+        problems.append("source.canton_unknown")
+
     cleaned_url = ""
     try:
         cleaned_url = normalise(base_url.strip())
@@ -384,6 +400,12 @@ def create_source(
             problems.append("source.invalid_url")
         elif not host_matches_allowlist(parts.hostname, settings.allowed_hosts):
             problems.append("source.host_not_allowed")
+        elif canton in CANTONS and not host_matches_allowlist(
+            parts.hostname, get_canton(canton).hosts
+        ):
+            # The host is allowed for crawling, but belongs to a different
+            # canton than the one selected.
+            problems.append("source.host_not_in_canton")
     except (ValueError, AttributeError):
         problems.append("source.invalid_url")
 
@@ -404,6 +426,7 @@ def create_source(
 
     source = Source(
         name=name,
+        canton=canton,
         base_url=cleaned_url,
         default_language=default_language,
         department=department.strip() or None,
@@ -420,7 +443,7 @@ def create_source(
         actor_label=f"user:{who.user.id}",
         object_type="source",
         object_id=str(source.id),
-        detail={"name": name, "base_url": cleaned_url},
+        detail={"name": name, "base_url": cleaned_url, "canton": canton},
     )
     db.commit()
     logger.info("source.created", base_url=cleaned_url)

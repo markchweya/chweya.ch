@@ -105,6 +105,7 @@ def sign_in(client, role: str) -> None:
 def create(client, **overrides):  # type: ignore[no-untyped-def]
     fields = {
         "name": "Behoerden",
+        "canton": "zug",
         "base_url": "https://www.zug.ch/behoerden",
         "default_language": "de",
         "department": "",

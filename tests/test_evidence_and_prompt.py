@@ -392,6 +392,22 @@ class TestCitationValidation:
         assert kept == []
 
 
+class TestCantonInPrompt:
+    def test_the_system_prompt_names_the_selected_canton(self) -> None:
+        from app.cantons import get_canton
+
+        outcome = assess(found(chunk(), chunk(title="B")), "Was kostet das?", now=NOW)
+        built = build_prompt("Was kostet das?", outcome, canton=get_canton("uri"))
+        system = built.request.messages[0].content
+        assert "Canton of Uri" in system
+        assert "Canton of Zug" not in system
+
+    def test_the_default_is_zug(self) -> None:
+        outcome = assess(found(chunk(), chunk(title="B")), "Was kostet das?", now=NOW)
+        built = build_prompt("Was kostet das?", outcome)
+        assert "Canton of Zug" in built.request.messages[0].content
+
+
 ROWS = "Ferien | Beginn | Ende\nHerbstferien | 03.10.2026 | 18.10.2026"
 FLATTENED = (
     "Die Herbstferien dauern vom 03.10.2026 bis 18.10.2026 und die "

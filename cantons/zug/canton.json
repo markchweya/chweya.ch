@@ -1,0 +1,27 @@
+{
+  "slug": "zug",
+  "label": "Zug",
+  "portal_label": "zg.ch",
+  "portal_url": "https://www.zg.ch",
+  "hosts": ["www.zg.ch", "zg.ch", "www.zug.ch", "zug.ch"],
+  "languages": ["de"],
+  "accent_rgb": "232 163 61",
+  "names": {
+    "de": "Zug",
+    "en": "Zug",
+    "fr": "Zoug",
+    "it": "Zugo"
+  },
+  "of_phrases": {
+    "de": "des Kantons Zug",
+    "en": "of the Canton of Zug",
+    "fr": "du canton de Zoug",
+    "it": "del Cantone di Zugo"
+  },
+  "by_phrases": {
+    "de": "vom Kanton Zug",
+    "en": "by the Canton of Zug",
+    "fr": "par le canton de Zoug",
+    "it": "dal Cantone di Zugo"
+  }
+}

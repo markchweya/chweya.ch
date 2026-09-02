@@ -146,6 +146,12 @@ class Source(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = uuid_pk()
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    # Which canton this source belongs to; see cantons/. Retrieval only
+    # reads sources of the canton being served, so a wrong value here leaks
+    # one canton's pages into another canton's answers.
+    canton: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="zug", server_default="zug"
+    )
     # Must be on the configured hostname allowlist. Checked server-side on
     # every write; a value here is never trusted at crawl time.
     base_url: Mapped[str] = mapped_column(String(2048), nullable=False)

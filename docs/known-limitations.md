@@ -115,6 +115,13 @@ required that disclosure; anyone putting this in front of the public inherits
 the decision and should restore the banner or obtain the canton's blessing
 first. The disclosure text remains in the string table.
 
+- Multi-canton serving is one deployment with a canton switch, and two
+  seams are known. Administrator uploads carry no canton and are visible in
+  every canton's answers; upload for one canton only once uploads carry a
+  canton of their own. The crawl hostname allowlist is one global setting,
+  so adding a canton means extending it in the configuration as well as
+  adding the canton folder.
+
 ## What must not be claimed
 
 - Not Swiss-hosted. Nothing has been deployed anywhere.

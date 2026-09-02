@@ -24,11 +24,11 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 
-from sqlalchemy import Text, and_, case, func, or_, select
+from sqlalchemy import Text, and_, case, func, or_, select, true
 from sqlalchemy.dialects.postgresql import TSQUERY as TSVECTOR_QUERY
 from sqlalchemy.orm import Session
 
-from app.db.models import Chunk, ContentStatus, Document, DocumentVersion
+from app.db.models import Chunk, ContentStatus, Document, DocumentVersion, Source
 from app.db.models.content import PublicationState
 from app.observability import get_logger
 from app.retrieval.embeddings import EmbeddingProvider
@@ -137,7 +137,7 @@ class SearchResult:
     degraded_reason: str = ""
 
 
-def _base_query():  # type: ignore[no-untyped-def]
+def _base_query(canton: str | None = None):  # type: ignore[no-untyped-def]
     """Chunks eligible for retrieval, joined to their document and version.
 
     The eligibility rules live here so both arms share exactly one definition
@@ -165,7 +165,13 @@ def _base_query():  # type: ignore[no-untyped-def]
         )
         .join(DocumentVersion, DocumentVersion.id == Chunk.version_id)
         .join(Document, Document.id == Chunk.document_id)
+        .outerjoin(Source, Source.id == Document.source_id)
         .where(
+            # Only the canton being served. A document without a source, an
+            # administrator upload, is visible in every canton.
+            or_(Source.canton == canton, Document.source_id.is_(None))
+            if canton
+            else true(),
             # Only the version currently in force for its document.
             Document.current_version_id == DocumentVersion.id,
             DocumentVersion.status == ContentStatus.APPROVED.value,
@@ -203,6 +209,7 @@ def semantic_search(
     *,
     limit: int = 20,
     languages: tuple[str, ...] | None = None,
+    canton: str | None = None,
     max_distance: float = MAX_SEMANTIC_DISTANCE,
 ) -> list[RetrievedChunk]:
     """Rank passages by embedding distance, discarding distant ones.
@@ -213,7 +220,7 @@ def semantic_search(
     """
     vector = provider.embed_query(question)
 
-    query = _base_query().where(
+    query = _base_query(canton).where(
         Chunk.embedding.is_not(None),
         # Only vectors from the current model. A chunk embedded by a previous
         # model is not comparable and would be ranked against a different
@@ -246,6 +253,7 @@ def keyword_search(
     *,
     limit: int = 20,
     languages: tuple[str, ...] | None = None,
+    canton: str | None = None,
 ) -> list[RetrievedChunk]:
     """Rank passages by full-text match.
 
@@ -281,7 +289,7 @@ def keyword_search(
     rank_expression = case(*rank_branches, else_=0.0)
 
     query = (
-        _base_query()
+        _base_query(canton)
         .where(or_(*match_branches))
         .order_by(rank_expression.desc())
         .limit(limit)
@@ -300,7 +308,9 @@ def keyword_search(
     # would flood the arm with pages matching one common word, and fusion would
     # then rank those against genuine matches. As a fallback it costs one extra
     # query on the questions that would otherwise return nothing.
-    return _run_keyword_query(session, _any_term_query(question, search_languages, limit))
+    return _run_keyword_query(
+        session, _any_term_query(question, search_languages, limit, canton)
+    )
 
 
 def _run_keyword_query(session: Session, query) -> list[RetrievedChunk]:  # type: ignore[no-untyped-def]
@@ -313,7 +323,7 @@ def _run_keyword_query(session: Session, query) -> list[RetrievedChunk]:  # type
     return results
 
 
-def _any_term_query(question: str, languages: tuple[str, ...], limit: int):  # type: ignore[no-untyped-def]
+def _any_term_query(question: str, languages: tuple[str, ...], limit: int, canton: str | None = None):  # type: ignore[no-untyped-def]
     """Build a query matching any term rather than all of them."""
     match_branches = []
     rank_branches = []
@@ -332,7 +342,7 @@ def _any_term_query(question: str, languages: tuple[str, ...], limit: int):  # t
 
     rank_expression = case(*rank_branches, else_=0.0)
     return (
-        _base_query()
+        _base_query(canton)
         .where(or_(*match_branches))
         .order_by(rank_expression.desc())
         .limit(limit)
@@ -384,6 +394,7 @@ def search(
     limit: int = 12,
     per_arm: int = 20,
     languages: tuple[str, ...] | None = None,
+    canton: str | None = None,
 ) -> SearchResult:
     """Run both arms and fuse the results.
 
@@ -396,7 +407,7 @@ def search(
 
     try:
         semantic = semantic_search(
-            session, provider, question, limit=per_arm, languages=languages
+            session, provider, question, limit=per_arm, languages=languages, canton=canton
         )
     except Exception as exc:  # noqa: BLE001
         # Broad on purpose: a model that fails to load, or a vector dimension
@@ -406,7 +417,9 @@ def search(
         result.semantic_available = False
         result.degraded_reason = f"semantic_unavailable_{type(exc).__name__}"
 
-    keyword = keyword_search(session, question, limit=per_arm, languages=languages)
+    keyword = keyword_search(
+        session, question, limit=per_arm, languages=languages, canton=canton
+    )
 
     if not semantic and result.semantic_available:
         # No vectors matched. Usually means nothing has been embedded yet,

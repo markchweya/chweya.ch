@@ -37,6 +37,7 @@ from app.llm.base import (
 from app.observability import get_logger
 from app.retrieval.embeddings import EmbeddingProvider
 from app.retrieval.evidence import Confidence, EvidenceAssessment, RiskTopic, assess
+from app.cantons import Canton, get_canton, normalise_canton
 from app.retrieval.layout import answer_blocks
 from app.retrieval.prompt import BuiltPrompt, build_prompt, should_call_model
 from app.retrieval.search import search
@@ -448,9 +449,10 @@ class PreparedAnswer:
     assessment: EvidenceAssessment
     answer_language: str
     degraded_reason: str
+    canton: str = "zug"
 
 
-def _unavailable(answer_language: str, exc: LLMError) -> Answer:
+def _unavailable(answer_language: str, exc: LLMError, canton: Canton | None = None) -> Answer:
     """The honest response when the model cannot answer.
 
     Fail closed. An unavailable model produces a fixed message, never an
@@ -458,7 +460,7 @@ def _unavailable(answer_language: str, exc: LLMError) -> Answer:
     """
     logger.warning("answer.model_unavailable", error=type(exc).__name__)
     return Answer(
-        text=t("answer.unavailable", answer_language),
+        text=t("answer.unavailable", answer_language, canton=canton),
         language=answer_language,
         confidence=Confidence.INSUFFICIENT,
         is_refusal=True,
@@ -472,6 +474,7 @@ def prepare_answer(
     question: str,
     *,
     language: str | None = None,
+    canton: str | None = None,
     max_context_tokens: int = 8192,
     max_output_tokens: int = 512,
     estimate_tokens=None,  # type: ignore[no-untyped-def]
@@ -484,17 +487,19 @@ def prepare_answer(
     """
     question = question.strip()
     answer_language = normalise_language(language) if language else detect_language(question)
+    canton_slug = normalise_canton(canton)
+    canton_config = get_canton(canton_slug)
 
     if not question:
         return Answer(
-            text=t("error.question_empty", answer_language),
+            text=t("error.question_empty", answer_language, canton=canton_config),
             language=answer_language,
             confidence=Confidence.INSUFFICIENT,
             is_refusal=True,
         )
     if len(question) > MAX_QUESTION_CHARACTERS:
         return Answer(
-            text=t("error.question_too_long", answer_language),
+            text=t("error.question_too_long", answer_language, canton=canton_config),
             language=answer_language,
             confidence=Confidence.INSUFFICIENT,
             is_refusal=True,
@@ -507,12 +512,12 @@ def prepare_answer(
     social = small_talk_key(question)
     if social is not None:
         return Answer(
-            text=t(social, answer_language),
+            text=t(social, answer_language, canton=canton_config),
             language=answer_language,
             confidence=Confidence.HIGH,
         )
 
-    result = search(session, embedder, question)
+    result = search(session, embedder, question, canton=canton_slug)
 
     # Section 9: an answer drawing on a passage with an unresolved
     # contradiction finding must say the official sources appear inconsistent
@@ -533,7 +538,7 @@ def prepare_answer(
         # information invites it to produce something anyway.
         logger.info("answer.insufficient_evidence", reasons=",".join(assessment.reasons))
         return Answer(
-            text=t("answer.insufficient_evidence", answer_language),
+            text=t("answer.insufficient_evidence", answer_language, canton=canton_config),
             language=answer_language,
             confidence=Confidence.INSUFFICIENT,
             risk_topics=assessment.risk_topics,
@@ -547,6 +552,7 @@ def prepare_answer(
         question,
         assessment,
         answer_language=answer_language,
+        canton=canton_config,
         max_context_tokens=max_context_tokens,
         answer_reserve_tokens=max_output_tokens + ANSWER_RESERVE_MARGIN,
         estimate_tokens=estimate_tokens,
@@ -556,6 +562,7 @@ def prepare_answer(
         assessment=assessment,
         answer_language=answer_language,
         degraded_reason=result.degraded_reason,
+        canton=canton_slug,
     )
 
 
@@ -591,7 +598,11 @@ def finalise_answer(text: str, was_truncated: bool, prepared: PreparedAnswer) ->
         # is one click away.
         logger.info("answer.model_reported_no_answer")
         return Answer(
-            text=t("answer.insufficient_evidence", answer_language),
+            text=t(
+                "answer.insufficient_evidence",
+                answer_language,
+                canton=get_canton(prepared.canton),
+            ),
             language=answer_language,
             confidence=Confidence.INSUFFICIENT,
             citations=all_citations,
@@ -609,7 +620,7 @@ def finalise_answer(text: str, was_truncated: bool, prepared: PreparedAnswer) ->
         # person can read them directly instead of being told nothing exists.
         logger.warning("answer.no_citations_produced")
         return Answer(
-            text=t("answer.uncited", answer_language),
+            text=t("answer.uncited", answer_language, canton=get_canton(prepared.canton)),
             language=answer_language,
             confidence=Confidence.INSUFFICIENT,
             citations=all_citations,
@@ -623,7 +634,9 @@ def finalise_answer(text: str, was_truncated: bool, prepared: PreparedAnswer) ->
 
     if was_truncated:
         # A cut-off list of requirements reads as an exhaustive one.
-        cleaned += "\n\n" + t("answer.qualified", answer_language)
+        cleaned += "\n\n" + t(
+            "answer.qualified", answer_language, canton=get_canton(prepared.canton)
+        )
 
     return Answer(
         text=cleaned,
@@ -644,6 +657,7 @@ async def answer_question(
     question: str,
     *,
     language: str | None = None,
+    canton: str | None = None,
     max_context_tokens: int = 8192,
     max_output_tokens: int = 512,
 ) -> Answer:
@@ -653,6 +667,7 @@ async def answer_question(
         embedder,
         question,
         language=language,
+        canton=canton,
         max_context_tokens=max_context_tokens,
         max_output_tokens=max_output_tokens,
         estimate_tokens=llm.estimate_tokens,
@@ -663,7 +678,9 @@ async def answer_question(
     try:
         generated = await llm.generate(prepared.prompt.request)
     except LLMError as exc:
-        return _unavailable(prepared.answer_language, exc)
+        return _unavailable(
+            prepared.answer_language, exc, canton=get_canton(prepared.canton)
+        )
 
     text, was_truncated = generated.text, generated.was_truncated
     if needs_citation_retry(text, prepared):
@@ -697,6 +714,7 @@ async def stream_answer(
     question: str,
     *,
     language: str | None = None,
+    canton: str | None = None,
     max_context_tokens: int = 8192,
     max_output_tokens: int = 512,
 ):  # type: ignore[no-untyped-def]  # AsyncIterator[tuple[str, str | Answer]]
@@ -716,6 +734,7 @@ async def stream_answer(
         embedder,
         question,
         language=language,
+        canton=canton,
         max_context_tokens=max_context_tokens,
         max_output_tokens=max_output_tokens,
         estimate_tokens=llm.estimate_tokens,
@@ -760,7 +779,10 @@ async def stream_answer(
                 held.clear()
             yield ("delta", chunk.text)
     except LLMError as exc:
-        yield ("answer", _unavailable(prepared.answer_language, exc))
+        yield (
+            "answer",
+            _unavailable(prepared.answer_language, exc, canton=get_canton(prepared.canton)),
+        )
         return
 
     text = "".join(accumulated)

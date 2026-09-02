@@ -1,18 +1,45 @@
 {% extends "base.html" %}
-{% block title %}Dumi Zug{% endblock %}
+{% block title %}Dumi {{ canton.label }}{% endblock %}
+
+{% block head %}
+{# The one token a canton overrides; the value comes from its canton.json. #}
+<style>:root { --dumi-accent-rgb: {{ canton.accent_rgb }}; }</style>
+{% endblock %}
 
 {% block body %}
 <header class="bar">
   <span class="dumi-lockup">
     {% include "_mark.html" %}
-    Dumi <span class="dumi-lockup__canton">Zug</span>
+    Dumi <span class="dumi-lockup__canton">{{ canton.label }}</span>
   </span>
 
   <div class="bar__controls">
+  {# The canton menu: the same interface serves several cantons, and
+     switching starts a fresh page for the chosen one. Hidden when only one
+     canton is configured. #}
+  {% if cantons | length > 1 %}
+  <details class="lang-menu canton-menu">
+    <summary class="icon-button lang-menu__summary" title="{{ t('chat.canton') }}">
+      <span class="visually-hidden">{{ t('chat.canton') }}</span>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 21s-7-5.1-7-11a7 7 0 0 1 14 0c0 5.9-7 11-7 11Z"/>
+        <circle cx="12" cy="10" r="2.5"/>
+      </svg>
+      <span class="lang-menu__code" aria-hidden="true">{{ canton.label }}</span>
+    </summary>
+    <nav class="lang-menu__list" aria-label="{{ t('chat.canton') }}">
+      {% for option in cantons %}
+        <a href="/?canton={{ option.slug }}&amp;lang={{ language }}"
+           {% if option.slug == canton.slug %}aria-current="true"{% endif %}>{{ option.label }}</a>
+      {% endfor %}
+    </nav>
+  </details>
+  {% endif %}
   {# A fresh chat is a fresh page: nothing is stored server-side, and users
      do not log in, so there is no history to manage. An icon-only control,
      with its name as real hidden text and a title for pointer users. #}
-  <a class="icon-button" href="/?lang={{ language }}" title="{{ t('chat.new_chat') }}">
+  <a class="icon-button" href="/?lang={{ language }}&amp;canton={{ canton.slug }}" title="{{ t('chat.new_chat') }}">
     <span class="visually-hidden">{{ t('chat.new_chat') }}</span>
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -37,7 +64,7 @@
     </summary>
     <nav class="lang-menu__list" aria-label="{{ t('chat.language') }}">
       {% for code, label in languages %}
-        <a href="?lang={{ code }}"
+        <a href="?lang={{ code }}&amp;canton={{ canton.slug }}"
            hreflang="{{ code }}"
            lang="{{ code }}"
            {% if code == language %}aria-current="true"{% endif %}>{{ label }}</a>
@@ -52,7 +79,7 @@
    remains in the string table and in the page footer of the docs; nothing
    else in the product claims official status. #}
 <main id="main" class="chat{% if not messages %} chat--welcome{% endif %}">
-  <h1 class="visually-hidden">Dumi Zug</h1>
+  <h1 class="visually-hidden">Dumi {{ canton.label }}</h1>
 
   {# The welcome state: the mark, one honest sentence about what this is,
      and the composer in the middle of the page. It exists only while the
@@ -89,6 +116,7 @@
         data-thinking="{{ t('chat.thinking') }}"
         data-unavailable="{{ t('answer.unavailable') }}">
     <input type="hidden" name="lang" value="{{ language }}">
+    <input type="hidden" name="canton" value="{{ canton.slug }}">
     {# A real label, visually hidden rather than absent. A placeholder is not
        a label: it disappears on focus and many screen readers skip it. #}
     <label for="question" class="visually-hidden">{{ t('chat.placeholder') }}</label>
@@ -131,7 +159,7 @@
        details get verified. #}
     <p class="ask__note">
       {{ t('chat.disclaimer') }}
-      <a href="https://www.zg.ch" rel="noopener noreferrer" target="_blank">zg.ch</a>.
+      <a href="{{ canton.portal_url }}" rel="noopener noreferrer" target="_blank">{{ canton.portal_label }}</a>.
     </p>
   </form>
 

@@ -1,0 +1,27 @@
+{
+  "slug": "uri",
+  "label": "Uri",
+  "portal_label": "uri.ch",
+  "portal_url": "https://www.uri.ch",
+  "hosts": ["www.uri.ch", "uri.ch"],
+  "languages": ["de"],
+  "accent_rgb": "246 195 66",
+  "names": {
+    "de": "Uri",
+    "en": "Uri",
+    "fr": "Uri",
+    "it": "Uri"
+  },
+  "of_phrases": {
+    "de": "des Kantons Uri",
+    "en": "of the Canton of Uri",
+    "fr": "du canton d'Uri",
+    "it": "del Canton Uri"
+  },
+  "by_phrases": {
+    "de": "vom Kanton Uri",
+    "en": "by the Canton of Uri",
+    "fr": "par le canton d'Uri",
+    "it": "dal Canton Uri"
+  }
+}

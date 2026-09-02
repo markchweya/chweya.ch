@@ -89,6 +89,13 @@
       <input type="text" id="src-name" name="name" required maxlength="200"
              placeholder="Behörden">
 
+      <label for="src-canton">Canton</label>
+      <select id="src-canton" name="canton">
+        {% for option in cantons %}
+          <option value="{{ option.slug }}">{{ option.label }}</option>
+        {% endfor %}
+      </select>
+
       <label for="src-url">Base URL</label>
       <input type="url" id="src-url" name="base_url" required maxlength="2048"
              placeholder="https://www.zug.ch/behoerden">

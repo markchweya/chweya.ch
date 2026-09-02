@@ -289,7 +289,7 @@ class TestChatPage:
         """An icon-only link: nothing is stored server-side, so a new chat
         is simply the page again, in the language already chosen."""
         html = client.get("/", headers={"Accept-Language": "fr"}).text
-        assert 'href="/?lang=fr"' in html
+        assert 'href="/?lang=fr&amp;canton=zug"' in html
         assert "Nouveau chat" in html
 
     def test_the_form_carries_the_localized_script_strings(self, client) -> None:  # type: ignore[no-untyped-def]
@@ -587,6 +587,55 @@ class TestAnswering:
         assert "Quellen" in response.text
 
 
+class TestCantonSelection:
+    """One deployment, several cantons, switched like the language."""
+
+    def test_the_page_serves_uri_when_asked(self, client) -> None:  # type: ignore[no-untyped-def]
+        html = client.get("/?canton=uri").text
+        assert 'Dumi <span class="dumi-lockup__canton">Uri</span>' in html
+        assert 'href="https://www.uri.ch"' in html
+        assert ">uri.ch</a>" in html
+        assert '--dumi-accent-rgb: 246 195 66' in html
+        assert '<input type="hidden" name="canton" value="uri">' in html
+
+    def test_an_unknown_canton_falls_back_to_zug(self, client) -> None:  # type: ignore[no-untyped-def]
+        html = client.get("/?canton=aargau").text
+        assert 'Dumi <span class="dumi-lockup__canton">Zug</span>' in html
+
+    def test_the_canton_menu_offers_both_cantons(self, client) -> None:  # type: ignore[no-untyped-def]
+        html = client.get("/?canton=uri&lang=de").text
+        assert 'href="/?canton=zug&amp;lang=de"' in html
+        assert 'href="/?canton=uri&amp;lang=de"' in html
+
+    def test_language_links_keep_the_canton(self, client) -> None:  # type: ignore[no-untyped-def]
+        html = client.get("/?canton=uri&lang=de").text
+        assert 'href="?lang=fr&amp;canton=uri"' in html
+
+    def test_a_question_for_uri_never_reads_zug_sources(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The seeded corpus belongs to Zug. Asked the same question for
+        Uri, retrieval finds nothing, the model is never called, and the
+        refusal names Uri and its portal."""
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de", "canton": "uri"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert payload["is_refusal"]
+        assert payload["citations"] == []
+        assert "des Kantons Uri" in payload["text"]
+        assert "uri.ch" in payload["text"]
+        assert client.stub.calls == 0
+
+    def test_the_same_question_for_zug_is_answered(self, client) -> None:  # type: ignore[no-untyped-def]
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de", "canton": "zug"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert not payload["is_refusal"]
+        assert payload["citations"]
+
+
 class TestHighRiskHandling:
     def test_a_tax_question_carries_the_limitation_notice(self, client) -> None:  # type: ignore[no-untyped-def]
         payload = client.post(
@@ -852,6 +901,17 @@ class TestFeedback:
         assert rows[0].language == "de"
         assert rows[0].confidence == "medium"
         assert rows[0].citation_urls == ["https://www.zug.ch/behoerden/anmeldung"]
+        assert rows[0].canton == "zug"
+
+    def test_the_canton_is_stored_and_an_unknown_one_defaults(self, client, db) -> None:  # type: ignore[no-untyped-def]
+        from sqlalchemy import select
+
+        from app.db.models import AnswerFeedback
+
+        client.post("/feedback", json={"vote": "up", "canton": "uri"})
+        client.post("/feedback", json={"vote": "up", "canton": "nowhere"})
+        rows = db.execute(select(AnswerFeedback)).scalars().all()
+        assert sorted(row.canton for row in rows) == ["uri", "zug"]
 
     def test_an_unknown_vote_is_refused(self, client, db) -> None:  # type: ignore[no-untyped-def]
         from sqlalchemy import select

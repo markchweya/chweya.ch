@@ -42,8 +42,9 @@
   // this only closes it when the person clicks somewhere else, which the
   // element does not do on its own.
   document.addEventListener("click", function (event) {
-    var open = document.querySelector(".lang-menu[open]");
-    if (open && !open.contains(event.target)) open.removeAttribute("open");
+    document.querySelectorAll(".lang-menu[open]").forEach(function (open) {
+      if (!open.contains(event.target)) open.removeAttribute("open");
+    });
   });
 
   if (suggestions) {
@@ -386,6 +387,7 @@
           body: JSON.stringify({
             vote: vote,
             language: payload.language,
+            canton: (document.querySelector('#ask input[name="canton"]') || {}).value || "",
             confidence: payload.confidence,
             is_refusal: payload.is_refusal,
             citations: (payload.citations || [])
@@ -514,7 +516,8 @@
       headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
       body: JSON.stringify({
         question: question,
-        lang: form.querySelector('input[name="lang"]').value
+        lang: form.querySelector('input[name="lang"]').value,
+        canton: form.querySelector('input[name="canton"]').value
       }),
       signal: controller.signal
     })

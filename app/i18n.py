@@ -6,11 +6,13 @@ be localised, and a German error message on a French page is exactly the kind
 of half-finished localisation that makes a public service feel unreliable.
 
 German is first in every table because it is the official language of the
-Canton of Zug and the language most sources are published in.
+cantons served and the language most sources are published in. Strings that
+name the canton carry placeholders completed from the canton registry.
 """
 
 from __future__ import annotations
 
+from app.cantons import Canton, get_canton
 from app.config import SUPPORTED_LANGUAGES
 
 DEFAULT_LANGUAGE = "de"
@@ -27,30 +29,30 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "notice.body": {
         "de": (
-            "Dies ist ein inoffizieller KI-Prototyp. Er wird nicht vom Kanton Zug "
+            "Dies ist ein inoffizieller KI-Prototyp. Er wird nicht {canton_by} "
             "betrieben oder unterstützt. Antworten können unvollständig oder "
             "veraltet sein. Bitte prüfen Sie wichtige Angaben anhand der zitierten "
             "offiziellen Quellen. Geben Sie keine persönlichen, vertraulichen, "
             "medizinischen, rechtlichen, steuerlichen oder fallbezogenen Angaben ein."
         ),
         "en": (
-            "This is an unofficial AI prototype. It is not operated or endorsed by "
-            "the Canton of Zug. Responses may be incomplete or outdated. Please "
+            "This is an unofficial AI prototype. It is not operated or endorsed "
+            "{canton_by}. Responses may be incomplete or outdated. Please "
             "verify important information using the cited official sources. Do not "
             "enter personal, confidential, medical, legal, tax or case-specific "
             "information."
         ),
         "fr": (
             "Ceci est un prototype d'IA non officiel. Il n'est ni exploité ni "
-            "approuvé par le canton de Zoug. Les réponses peuvent être incomplètes "
+            "approuvé {canton_by}. Les réponses peuvent être incomplètes "
             "ou obsolètes. Veuillez vérifier les informations importantes auprès "
             "des sources officielles citées. N'entrez aucune information "
             "personnelle, confidentielle, médicale, juridique, fiscale ou relative "
             "à un dossier."
         ),
         "it": (
-            "Questo è un prototipo di IA non ufficiale. Non è gestito né approvato "
-            "dal Cantone di Zugo. Le risposte possono essere incomplete o non "
+            "Questo è un prototipo di IA non ufficiale. Non è gestito né "
+            "approvato {canton_by}. Le risposte possono essere incomplete o non "
             "aggiornate. Verifichi le informazioni importanti consultando le fonti "
             "ufficiali citate. Non inserisca dati personali, riservati, medici, "
             "legali, fiscali o relativi a un caso specifico."
@@ -59,23 +61,23 @@ STRINGS: dict[str, dict[str, str]] = {
     "answer.insufficient_evidence": {
         "de": (
             "Ich konnte dazu keine gesicherten Angaben in den offiziellen Seiten "
-            "des Kantons Zug finden. Bitte wenden Sie sich an die zuständige "
-            "Stelle oder suchen Sie direkt auf zug.ch."
+            "{canton_of} finden. Bitte wenden Sie sich an die zuständige "
+            "Stelle oder suchen Sie direkt auf {portal}."
         ),
         "en": (
-            "I could not find verified information about this in the Canton of "
-            "Zug's official pages. Please contact the responsible office or search "
-            "directly on zug.ch."
+            "I could not find verified information about this in the official "
+            "pages {canton_of}. Please contact the responsible office or search "
+            "directly on {portal}."
         ),
         "fr": (
             "Je n'ai pas trouvé d'informations vérifiées à ce sujet dans les pages "
-            "officielles du canton de Zoug. Veuillez contacter le service compétent "
-            "ou effectuer une recherche directement sur zug.ch."
+            "officielles {canton_of}. Veuillez contacter le service compétent "
+            "ou effectuer une recherche directement sur {portal}."
         ),
         "it": (
             "Non ho trovato informazioni verificate in merito nelle pagine "
-            "ufficiali del Cantone di Zugo. La preghiamo di contattare l'ufficio "
-            "competente o di cercare direttamente su zug.ch."
+            "ufficiali {canton_of}. La preghiamo di contattare l'ufficio "
+            "competente o di cercare direttamente su {portal}."
         ),
     },
     "answer.uncited": {
@@ -106,19 +108,19 @@ STRINGS: dict[str, dict[str, str]] = {
     "answer.unavailable": {
         "de": (
             "Der Assistent ist im Moment nicht erreichbar. Bitte versuchen Sie es "
-            "später erneut oder nutzen Sie die Suche auf zug.ch."
+            "später erneut oder nutzen Sie die Suche auf {portal}."
         ),
         "en": (
             "The assistant is currently unavailable. Please try again later or use "
-            "the search on zug.ch."
+            "the search on {portal}."
         ),
         "fr": (
             "L'assistant n'est pas disponible pour le moment. Veuillez réessayer "
-            "plus tard ou utiliser la recherche sur zug.ch."
+            "plus tard ou utiliser la recherche sur {portal}."
         ),
         "it": (
             "L'assistente non è al momento disponibile. La preghiamo di riprovare "
-            "più tardi o di utilizzare la ricerca su zug.ch."
+            "più tardi o di utilizzare la ricerca su {portal}."
         ),
     },
     "answer.qualified": {
@@ -177,24 +179,24 @@ STRINGS: dict[str, dict[str, str]] = {
     "answer.greeting": {
         "de": (
             "Hallo! Ich bin Dumi und beantworte Fragen zu den Dienstleistungen "
-            "des Kantons Zug: Adresse anmelden, Ausweis beantragen, Steuern, "
+            "{canton_of}: Adresse anmelden, Ausweis beantragen, Steuern, "
             "Abfall und mehr. Was möchten Sie wissen?"
         ),
         "en": (
-            "Hello! I am Dumi and I answer questions about Canton of Zug "
-            "services: registering an address, applying for an ID, taxes, "
+            "Hello! I am Dumi and I answer questions about the services "
+            "{canton_of}: registering an address, applying for an ID, taxes, "
             "waste disposal and more. What would you like to know?"
         ),
         "fr": (
             "Bonjour ! Je suis Dumi et je réponds aux questions sur les "
-            "prestations du canton de Zoug : annoncer son arrivée, demander "
+            "prestations {canton_of} : annoncer son arrivée, demander "
             "une carte d'identité, les impôts, les déchets et plus encore. "
             "Que souhaitez-vous savoir ?"
         ),
         "it": (
-            "Salve! Sono Dumi e rispondo a domande sui servizi del Canton "
-            "Zugo: notifica del domicilio, richiesta della carta d'identità, "
-            "imposte, rifiuti e altro. Cosa desidera sapere?"
+            "Salve! Sono Dumi e rispondo a domande sui servizi "
+            "{canton_of}: notifica del domicilio, richiesta della carta "
+            "d'identità, imposte, rifiuti e altro. Cosa desidera sapere?"
         ),
     },
     "answer.thanks": {
@@ -209,7 +211,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "answer.about": {
         "de": (
             "Ich bin Dumi, ein Assistent für Fragen zu den Dienstleistungen "
-            "des Kantons Zug. Ich antworte ausschliesslich auf Grundlage "
+            "{canton_of}. Ich antworte ausschliesslich auf Grundlage "
             "veröffentlichter offizieller Informationen und zeige zu jeder "
             "Antwort die Quellen. Fragen Sie mich zum Beispiel, wie Sie eine "
             "Adresse anmelden, einen Ausweis beantragen oder Sperrgut "
@@ -217,8 +219,8 @@ STRINGS: dict[str, dict[str, str]] = {
             "sich bitte an die zuständige Stelle."
         ),
         "en": (
-            "I am Dumi, an assistant for questions about Canton of Zug "
-            "services. I answer only from published official information and "
+            "I am Dumi, an assistant for questions about the services "
+            "{canton_of}. I answer only from published official information and "
             "show the sources with every answer. Ask me, for example, how to "
             "register an address, apply for an ID, or dispose of bulky "
             "waste. For questions about your personal case, please contact "
@@ -226,7 +228,7 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "fr": (
             "Je suis Dumi, un assistant pour les questions sur les "
-            "prestations du canton de Zoug. Je réponds uniquement sur la "
+            "prestations {canton_of}. Je réponds uniquement sur la "
             "base d'informations officielles publiées et j'indique mes "
             "sources avec chaque réponse. Demandez-moi par exemple comment "
             "annoncer votre arrivée, demander une carte d'identité ou "
@@ -234,8 +236,8 @@ STRINGS: dict[str, dict[str, str]] = {
             "personnelle, adressez-vous au service compétent."
         ),
         "it": (
-            "Sono Dumi, un assistente per le domande sui servizi del Canton "
-            "Zugo. Rispondo esclusivamente sulla base di informazioni "
+            "Sono Dumi, un assistente per le domande sui servizi "
+            "{canton_of}. Rispondo esclusivamente sulla base di informazioni "
             "ufficiali pubblicate e mostro le fonti con ogni risposta. Mi "
             "chieda ad esempio come notificare il domicilio, richiedere la "
             "carta d'identità o smaltire i rifiuti ingombranti. Per il suo "
@@ -410,22 +412,28 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Nouveau chat",
         "it": "Nuova chat",
     },
+    "chat.canton": {
+        "de": "Kanton wählen",
+        "en": "Choose canton",
+        "fr": "Choisir le canton",
+        "it": "Scegliere il cantone",
+    },
     "chat.intro": {
         "de": (
             "Ich heisse Dumi. Ich beantworte Fragen zu den öffentlichen "
-            "Informationen des Kantons Zug."
+            "Informationen {canton_of}."
         ),
         "en": (
             "My name is Dumi. I answer questions about the public "
-            "information of the Canton of Zug."
+            "information {canton_of}."
         ),
         "fr": (
             "Je m'appelle Dumi. Je réponds aux questions sur les "
-            "informations publiques du canton de Zoug."
+            "informations publiques {canton_of}."
         ),
         "it": (
             "Mi chiamo Dumi. Rispondo a domande sulle informazioni "
-            "pubbliche del Cantone di Zugo."
+            "pubbliche {canton_of}."
         ),
     },
     "chat.suggestions": {
@@ -739,6 +747,30 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "L'adresse n'est pas valide. Elle doit commencer par https://.",
         "it": "L'indirizzo non è valido. Deve iniziare con https://.",
     },
+    "source.canton_unknown": {
+        "de": "Bitte wählen Sie einen konfigurierten Kanton.",
+        "en": "Please choose a configured canton.",
+        "fr": "Veuillez choisir un canton configuré.",
+        "it": "Selezioni un cantone configurato.",
+    },
+    "source.host_not_in_canton": {
+        "de": (
+            "Dieser Host gehört nicht zum gewählten Kanton. Eine Quelle unter "
+            "dem falschen Kanton würde dessen Antworten verfälschen."
+        ),
+        "en": (
+            "This host does not belong to the selected canton. A source filed "
+            "under the wrong canton would distort that canton's answers."
+        ),
+        "fr": (
+            "Cet hôte n'appartient pas au canton sélectionné. Une source "
+            "classée sous le mauvais canton fausserait ses réponses."
+        ),
+        "it": (
+            "Questo host non appartiene al cantone selezionato. Una fonte "
+            "registrata sotto il cantone sbagliato ne falserebbe le risposte."
+        ),
+    },
     "source.host_not_allowed": {
         "de": (
             "Dieser Host steht nicht auf der Liste der erlaubten Websites. "
@@ -891,17 +923,31 @@ def negotiate_language(accept_language: str | None) -> str:
     return max(candidates, key=lambda item: item[0])[1]
 
 
-def t(key: str, language: str = DEFAULT_LANGUAGE) -> str:
+def t(key: str, language: str = DEFAULT_LANGUAGE, canton: Canton | None = None) -> str:
     """Return a localised string.
 
     A missing translation falls back to German rather than to the key, because
     showing "answer.insufficient_evidence" to a resident is worse than showing
     the German sentence.
+
+    Strings that mention the canton carry placeholders and are completed from
+    the canton registry, so one string table serves every canton. Callers that
+    do not pass a canton get the default one, which keeps a sentence whole
+    rather than showing a bare placeholder.
     """
     table = STRINGS.get(key)
     if table is None:
         return key
-    return table.get(language) or table.get(DEFAULT_LANGUAGE) or key
+    text = table.get(language) or table.get(DEFAULT_LANGUAGE) or key
+    if "{" in text:
+        c = canton or get_canton()
+        text = text.format(
+            canton=c.name(language),
+            canton_of=c.of_phrase(language),
+            canton_by=c.by_phrase(language),
+            portal=c.portal_label,
+        )
+    return text
 
 
 def missing_translations() -> dict[str, tuple[str, ...]]:

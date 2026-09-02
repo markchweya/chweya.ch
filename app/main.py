@@ -79,8 +79,8 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Dumi",
         description=(
-            "Unofficial AI information assistant for public Canton of Zug content. "
-            "Not operated or endorsed by the Canton of Zug."
+            "Unofficial AI information assistant for public Swiss cantonal "
+            "content. Not operated or endorsed by any canton."
         ),
         version="0.1.0",
         lifespan=lifespan,

@@ -181,7 +181,9 @@ class Settings(BaseSettings):
     # zg.ch is the Canton of Zug, zug.ch is the City of Zug. Residents ask
     # about both levels of government, and the cantonal content lives on
     # zg.ch.
-    crawler_allowed_hosts: str = "www.zug.ch,zug.ch,www.zg.ch,zg.ch"
+    crawler_allowed_hosts: str = (
+        "www.zug.ch,zug.ch,www.zg.ch,zg.ch,www.uri.ch,uri.ch"
+    )
     crawler_user_agent: str = "DumiBot/0.1 (unofficial prototype; +{contact})"
     # Required. A crawler that does not say who to contact should not run.
     crawler_contact: str = ""

@@ -31,6 +31,8 @@ class AnswerFeedback(Base, TimestampMixin):
     # storing the conversation: which language, how confident the system
     # claimed to be, and whether the answer was a refusal.
     language: Mapped[str] = mapped_column(String(8), nullable=False, default="", server_default="")
+    # Which canton the answer served; see cantons/.
+    canton: Mapped[str] = mapped_column(String(16), nullable=False, default="zug", server_default="zug")
     confidence: Mapped[str] = mapped_column(String(16), nullable=False, default="", server_default="")
     is_refusal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     # The cited pages, as URLs. A page that keeps appearing under disliked
