@@ -194,7 +194,7 @@ class Settings(BaseSettings):
     # about both levels of government, and the cantonal content lives on
     # zg.ch.
     crawler_allowed_hosts: str = (
-        "www.zug.ch,zug.ch,www.zg.ch,zg.ch,www.uri.ch,uri.ch"
+        "www.zug.ch,zug.ch,www.zg.ch,zg.ch,www.ur.ch,ur.ch"
     )
     crawler_user_agent: str = "DumiBot/0.1 (unofficial prototype; +{contact})"
     # Required. A crawler that does not say who to contact should not run.
@@ -268,7 +268,7 @@ class Settings(BaseSettings):
                 raise ValueError(
                     f"CRAWLER_ALLOWED_HOSTS entry {entry!r} is not a hostname. "
                     "Use a plain comma-separated list such as "
-                    "www.zg.ch,zg.ch,www.uri.ch,uri.ch with no brackets, "
+                    "www.zg.ch,zg.ch,www.ur.ch,ur.ch with no brackets, "
                     "scheme or path."
                 )
         return value

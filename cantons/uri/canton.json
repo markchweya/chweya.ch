@@ -1,9 +1,9 @@
 {
   "slug": "uri",
   "label": "Uri",
-  "portal_label": "uri.ch",
-  "portal_url": "https://www.uri.ch",
-  "hosts": ["www.uri.ch", "uri.ch"],
+  "portal_label": "ur.ch",
+  "portal_url": "https://www.ur.ch",
+  "hosts": ["www.ur.ch", "ur.ch"],
   "languages": ["de"],
   "accent_rgb": "246 195 66",
   "names": {

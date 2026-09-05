@@ -210,7 +210,7 @@ class TestAllowlistValidation:
 
     def test_plain_hostnames_pass(self) -> None:
         settings = production_settings(
-            crawler_allowed_hosts="www.zug.ch,zug.ch,www.zg.ch,zg.ch,www.uri.ch,uri.ch"
+            crawler_allowed_hosts="www.zug.ch,zug.ch,www.zg.ch,zg.ch,www.ur.ch,ur.ch"
         )
         assert len(settings.allowed_hosts) == 6
 

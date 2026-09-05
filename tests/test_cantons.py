@@ -45,7 +45,7 @@ class TestCantonStrings:
     def test_the_refusal_names_the_selected_canton_and_portal(self) -> None:
         text = t("answer.insufficient_evidence", "de", canton=get_canton("uri"))
         assert "des Kantons Uri" in text
-        assert "uri.ch" in text
+        assert "ur.ch" in text
         assert "Zug" not in text
 
     def test_the_default_canton_is_zug(self) -> None:

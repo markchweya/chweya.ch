@@ -592,15 +592,15 @@ class TestCantonSelection:
 
     def test_the_page_serves_uri_when_asked(self, client) -> None:  # type: ignore[no-untyped-def]
         html = client.get("/?canton=uri").text
-        assert 'Dumi <span class="dumi-lockup__canton">Uri</span>' in html
-        assert 'href="https://www.uri.ch"' in html
-        assert ">uri.ch</a>" in html
+        assert '<span class="dumi-lockup__canton">Uri</span>' in html
+        assert 'href="https://www.ur.ch"' in html
+        assert ">ur.ch</a>" in html
         assert '--dumi-accent-rgb: 246 195 66' in html
         assert '<input type="hidden" name="canton" value="uri">' in html
 
     def test_an_unknown_canton_falls_back_to_zug(self, client) -> None:  # type: ignore[no-untyped-def]
         html = client.get("/?canton=aargau").text
-        assert 'Dumi <span class="dumi-lockup__canton">Zug</span>' in html
+        assert '<span class="dumi-lockup__canton">Zug</span>' in html
 
     def test_the_canton_menu_offers_both_cantons(self, client) -> None:  # type: ignore[no-untyped-def]
         html = client.get("/?canton=uri&lang=de").text
@@ -623,7 +623,7 @@ class TestCantonSelection:
         assert payload["is_refusal"]
         assert payload["citations"] == []
         assert "des Kantons Uri" in payload["text"]
-        assert "uri.ch" in payload["text"]
+        assert "ur.ch" in payload["text"]
         assert client.stub.calls == 0
 
     def test_the_same_question_for_zug_is_answered(self, client) -> None:  # type: ignore[no-untyped-def]
