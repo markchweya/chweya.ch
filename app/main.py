@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import OperationalError
 
 from app.api import admin, admin_review, admin_uploads, chat, health
 from app.config import Environment, get_settings
@@ -66,6 +67,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             db.commit()
     except Exception as exc:  # noqa: BLE001 - startup must survive a down database
         logger.warning("crawl.orphan_cleanup_skipped", error=type(exc).__name__)
+        if isinstance(exc, OperationalError):
+            logger.warning(
+                "database.unreachable",
+                hint=(
+                    "No answer can be given until the database is up. On a "
+                    "laptop: start Docker Desktop, then `docker compose up -d db`."
+                ),
+            )
 
     yield
 

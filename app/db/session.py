@@ -38,6 +38,7 @@ def get_engine() -> Engine:
             # after the other end has already closed it.
             pool_recycle=1800,
             pool_pre_ping=True,
+            connect_args={"connect_timeout": settings.database_connect_timeout_seconds},
             future=True,
         )
 

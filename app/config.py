@@ -145,6 +145,10 @@ class Settings(BaseSettings):
     # Statement timeout in milliseconds. Prevents one pathological retrieval
     # query from holding a connection open indefinitely.
     database_statement_timeout_ms: Annotated[int, Field(ge=1000, le=300_000)] = 30_000
+    # How long one connection attempt may take. The driver's default waits
+    # minutes on a host that is down, which on a laptop is Docker Desktop
+    # not running: the failure should be reported in seconds, with a hint.
+    database_connect_timeout_seconds: Annotated[int, Field(ge=1, le=60)] = 5
 
     # --------------------------------------------------------------- redis
     redis_url: RedisDsn = "redis://localhost:6379/0"  # type: ignore[assignment]
