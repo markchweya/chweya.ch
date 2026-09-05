@@ -33,6 +33,7 @@
       <caption class="visually-hidden">Configured crawl sources</caption>
       <thead>
         <tr><th scope="col">Name</th><th scope="col">Base URL</th>
+            <th scope="col">Canton</th>
             <th scope="col">Language</th><th scope="col">Last run</th>
             <th scope="col">Action</th></tr>
       </thead>
@@ -42,6 +43,7 @@
           <tr>
             <th scope="row">{{ source.name }}</th>
             <td>{{ source.base_url }}</td>
+            <td>{{ source.canton | capitalize }}</td>
             <td>{{ source.default_language | upper }}</td>
             {# State is a word, not only a colour. #}
             <td>
@@ -63,6 +65,13 @@
               {% else %}
                 <form method="post" action="/admin/sources/{{ source.id }}/crawl">
                   <button type="submit" class="send">Crawl now</button>
+                </form>
+                {# Removes the source and every page it brought in. A wrong
+                   site filed under a canton would otherwise keep answering
+                   for it. #}
+                <form method="post" action="/admin/sources/{{ source.id }}/remove"
+                      onsubmit="return confirm({{ ('Remove ' ~ source.name ~ ' and all of its pages?') | tojson }});">
+                  <button type="submit" class="remove">Remove</button>
                 </form>
               {% endif %}
             </td>

@@ -198,6 +198,72 @@ class TestCrawlButton:
         assert client.scheduled == []
 
 
+class TestRemoval:
+    def source(self, client, content_db) -> Source:  # type: ignore[no-untyped-def]
+        sign_in(client, "content_admin")
+        create(client)
+        return content_db.execute(select(Source)).scalars().one()
+
+    def test_a_source_is_removed_with_its_pages(self, client, content_db) -> None:  # type: ignore[no-untyped-def]
+        """The first Uri crawl hit the wrong site. Removing the source must
+        take its pages with it: the schema only clears their source link,
+        and a document without a source counts for every canton."""
+        from app.db.models import CrawledUrl, Document
+
+        source = self.source(client, content_db)
+        content_db.add(
+            Document(
+                source_id=source.id,
+                kind="crawled_page",
+                url="https://www.zug.ch/behoerden/x",
+                title="X",
+                language="de",
+            )
+        )
+        content_db.add(CrawledUrl(source_id=source.id, url="https://www.zug.ch/behoerden/x"))
+        content_db.commit()
+
+        response = client.post(f"/admin/sources/{source.id}/remove")
+        assert response.status_code == 303
+        assert "message=source.removed" in response.headers["location"]
+        content_db.expire_all()
+        assert content_db.execute(select(Source)).scalars().all() == []
+        assert content_db.execute(select(Document)).scalars().all() == []
+        assert content_db.execute(select(CrawledUrl)).scalars().all() == []
+
+    def test_removal_is_audited_with_the_count(self, client, content_db) -> None:  # type: ignore[no-untyped-def]
+        from app.db.models import AuditAction, AuditEvent
+
+        source = self.source(client, content_db)
+        client.post(f"/admin/sources/{source.id}/remove")
+        content_db.expire_all()
+        events = content_db.execute(
+            select(AuditEvent).where(AuditEvent.action == AuditAction.SOURCE_REMOVED.value)
+        ).scalars().all()
+        assert len(events) == 1
+        assert events[0].detail["documents_removed"] == 0
+        assert events[0].detail["canton"] == "zug"
+
+    def test_a_source_being_crawled_is_not_removed(self, client, content_db) -> None:  # type: ignore[no-untyped-def]
+        source = self.source(client, content_db)
+        client.post(f"/admin/sources/{source.id}/crawl")
+        response = client.post(f"/admin/sources/{source.id}/remove")
+        assert "problems=source.busy" in response.headers["location"]
+        content_db.expire_all()
+        assert content_db.execute(select(Source)).scalars().one().id == source.id
+
+    def test_an_auditor_cannot_remove_a_source(self, client, content_db) -> None:  # type: ignore[no-untyped-def]
+        source = self.source(client, content_db)
+        sign_in(client, "auditor")
+        assert client.post(f"/admin/sources/{source.id}/remove").status_code == 403
+
+    def test_the_page_shows_the_canton_and_a_remove_button(self, client, content_db) -> None:  # type: ignore[no-untyped-def]
+        source = self.source(client, content_db)
+        html = client.get("/admin/sources").text
+        assert "<td>Zug</td>" in html
+        assert f'action="/admin/sources/{source.id}/remove"' in html
+
+
 class TestOrphanedRuns:
     def test_startup_repairs_runs_a_dead_process_left_running(self, content_db, users) -> None:  # type: ignore[no-untyped-def]
         source = Source(name="S", base_url="https://www.zug.ch/x", default_language="de")

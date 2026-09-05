@@ -149,6 +149,16 @@ async def _run_crawl(source_id: uuid.UUID, triggered_by_id: uuid.UUID | None) ->
         session.close()
 
 
+def is_crawling(db, source_id: uuid.UUID) -> bool:  # type: ignore[no-untyped-def]
+    """Whether a crawl of this source is scheduled or running right now.
+
+    Both signals are checked: the in-process set covers a task that has
+    been scheduled but not yet written its run row, the run row covers a
+    run started by a previous process that is still marked as running.
+    """
+    return source_id in _active or active_run_for(db, source_id) is not None
+
+
 def start_crawl(
     db: Session, source: Source, *, triggered_by_id: uuid.UUID | None
 ) -> list[str]:
@@ -160,7 +170,7 @@ def start_crawl(
     """
     if source.is_paused:
         return ["crawl.source_paused"]
-    if source.id in _active or active_run_for(db, source.id) is not None:
+    if is_crawling(db, source.id):
         return ["crawl.already_running"]
 
     _active.add(source.id)

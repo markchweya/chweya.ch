@@ -17,7 +17,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -27,6 +27,7 @@ from app.db.models import (
     Chunk,
     ContentStatus,
     ContradictionFinding,
+    CrawledUrl,
     CrawlRun,
     Document,
     DocumentVersion,
@@ -448,6 +449,57 @@ def create_source(
     db.commit()
     logger.info("source.created", base_url=cleaned_url)
     return RedirectResponse("/admin/sources?message=source.created", status_code=303)
+
+
+@router.post("/sources/{source_id}/remove")
+def remove_source(
+    source_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(db_session),
+    who: CurrentUser = Depends(require(Permission.MANAGE_SOURCES)),
+) -> RedirectResponse:
+    """Remove a source together with every page it brought in.
+
+    The pages go too, deliberately. The schema only clears a document's
+    link to a deleted source, and a document without a source counts as
+    canton-independent in retrieval, so removing the source alone would
+    turn a wrong site's pages into every canton's evidence. Refused while
+    a crawl of the source is queued or running. Audited, with the counts.
+    """
+    source = db.get(Source, source_id)
+    if source is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="source_not_found")
+
+    from app.ingest import runner
+
+    if runner.is_crawling(db, source.id):
+        return RedirectResponse("/admin/sources?problems=source.busy", status_code=303)
+
+    documents = db.execute(
+        select(func.count()).select_from(Document).where(Document.source_id == source.id)
+    ).scalar_one()
+    # Versions, chunks and findings cascade from the document row.
+    db.execute(delete(Document).where(Document.source_id == source.id))
+    db.execute(delete(CrawledUrl).where(CrawledUrl.source_id == source.id))
+
+    record(
+        db,
+        action=AuditAction.SOURCE_REMOVED,
+        actor_user_id=who.user.id,
+        actor_label=f"user:{who.user.id}",
+        object_type="source",
+        object_id=str(source.id),
+        detail={
+            "name": source.name,
+            "base_url": source.base_url,
+            "canton": source.canton,
+            "documents_removed": documents,
+        },
+    )
+    db.delete(source)
+    db.commit()
+    logger.info("source.removed", base_url=source.base_url, documents=documents)
+    return RedirectResponse("/admin/sources?message=source.removed", status_code=303)
 
 
 @router.post("/sources/{source_id}/crawl")

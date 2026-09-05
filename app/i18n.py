@@ -789,6 +789,30 @@ STRINGS: dict[str, dict[str, str]] = {
             "definito nella configurazione, non qui."
         ),
     },
+    "source.removed": {
+        "de": "Die Quelle und alle ihre Seiten wurden entfernt.",
+        "en": "The source and all of its pages were removed.",
+        "fr": "La source et toutes ses pages ont été supprimées.",
+        "it": "La fonte e tutte le sue pagine sono state rimosse.",
+    },
+    "source.busy": {
+        "de": (
+            "Diese Quelle wird gerade gecrawlt. Warten Sie, bis der Lauf "
+            "beendet ist, und versuchen Sie es dann erneut."
+        ),
+        "en": (
+            "This source is being crawled right now. Wait for the run to "
+            "finish, then try again."
+        ),
+        "fr": (
+            "Cette source est en cours de parcours. Attendez la fin de "
+            "l'exécution, puis réessayez."
+        ),
+        "it": (
+            "Questa fonte è in scansione in questo momento. Attenda la fine "
+            "dell'esecuzione e riprovi."
+        ),
+    },
     "source.duplicate": {
         "de": "Eine Quelle mit dieser Adresse existiert bereits.",
         "en": "A source with this address already exists.",

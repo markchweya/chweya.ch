@@ -515,6 +515,23 @@ html:has(#transcript)::-webkit-scrollbar { display: none; }
 }
 .send:hover, .stop:hover { background: var(--dumi-ground); }
 
+/* The destructive action in the administration: same shape as the other
+ * buttons, quieter by default, red only on hover so it is never the loudest
+ * thing in a row. */
+.remove {
+  margin-top: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: 999px;
+  background: none;
+  color: var(--dumi-ink-soft);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.remove:hover { border-color: #b3261e; color: #b3261e; }
+
 /* In the chat composer the same classes become icon discs, 2.75rem (44px).
    Scoped to .ask: the administration pages put text in these buttons, and a
    sentence crushed into a circle is what this selector previously did to
