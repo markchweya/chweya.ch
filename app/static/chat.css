@@ -704,6 +704,88 @@ html:has(#transcript)::-webkit-scrollbar { display: none; }
 /* Wide tables scroll inside their own container rather than the page. */
 .admin table { display: block; overflow-x: auto; }
 
+/* Links in the administration take the flow token; the browser default blue
+ * is the one colour in the interface that comes from nowhere. */
+.admin a { color: var(--dumi-flow); }
+.admin a:hover { color: var(--dumi-ink); }
+
+/* Header navigation on administration pages: a text link back to the
+ * overview and the sign-out button, aligned with the lockup. */
+.bar__nav { display: flex; align-items: center; gap: 1rem; }
+.bar__link {
+  color: var(--dumi-ink-soft);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+.bar__link:hover { color: var(--dumi-ink); text-decoration: underline; }
+
+/* Cards: one framed surface per item, the same frame the chat uses for
+ * tables and menus. Replaces the grid table for sources, which broke into
+ * unreadable columns on a phone. */
+.cards { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: 0.75rem; }
+.card {
+  padding: 1rem 1.15rem 1.1rem;
+  border: 1px solid var(--dumi-line);
+  border-radius: 14px;
+  background: var(--dumi-surface);
+}
+.card--form { margin-top: 2rem; }
+.card--form h2 { margin-top: 0; border-bottom: 0; padding-bottom: 0; }
+.card__lead { color: var(--dumi-ink-soft); font-size: 0.9375rem; margin-top: 0.25rem; }
+
+.source__head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.source__name {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-family: var(--dumi-font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.source__url {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+/* The run line: state as words, counts in tabular digits so a number that
+ * grows while the page polls does not make the line wobble. */
+.source__run {
+  margin: 0.6rem 0 0;
+  color: var(--dumi-ink-soft);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+.source__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.85rem; }
+.source__actions .remove { margin-top: 0; min-height: 2.75rem; }
+
+/* Small labels beside a name: canton, language, paused. Words, not colour. */
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: rgb(var(--dumi-flow-rgb) / 0.16);
+  color: var(--dumi-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.badge--muted { background: var(--dumi-ground); color: var(--dumi-ink-soft); }
+
+/* Forms wider than the sign-in card: short fields share a row on wide
+ * screens and stack on narrow ones. */
+.auth__form--wide { max-width: none; }
+.auth__row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 0.75rem; }
+.auth__row > div { display: grid; gap: 0.35rem; }
+.auth__row label { margin-top: 0.75rem; }
+@media (max-width: 40rem) {
+  .auth__row { grid-template-columns: 1fr; }
+  .admin { padding: 1rem 0.75rem 3rem; }
+  .card { padding: 0.9rem 0.9rem 1rem; }
+}
+
 /* The extracted-text preview on an upload. Monospace because the point is to
  * see exactly what came out, including the runs of spaces and the broken
  * ligatures a bad PDF extraction leaves behind. */

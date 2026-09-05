@@ -300,6 +300,62 @@ def dashboard(
     )
 
 
+def run_is_active(run: CrawlRun | None) -> bool:
+    """Whether a run is still doing something the sources page should follow.
+
+    The crawl state turns to completed before indexing and embedding start,
+    and for a whole portal those take longer than the fetching did. A run is
+    live until its phase says done.
+    """
+    if run is None:
+        return False
+    return run.state in ("queued", "running") or run.phase != "done"
+
+
+def run_progress(run: CrawlRun | None) -> dict[str, Any] | None:
+    """The run as the sources page's script reads it."""
+    if run is None:
+        return None
+    return {
+        "state": run.state,
+        "phase": run.phase,
+        "active": run_is_active(run),
+        "started_at": run.started_at.strftime("%d.%m.%Y %H:%M") if run.started_at else None,
+        "finished_at": run.finished_at.strftime("%d.%m.%Y %H:%M") if run.finished_at else None,
+        "fetched": run.urls_fetched,
+        "unchanged": run.urls_unchanged,
+        "failed": run.urls_failed,
+        "blocked": run.urls_blocked,
+        "discovered": run.urls_discovered,
+        "versions": run.versions_created,
+        "embedded": run.chunks_embedded,
+        "error": run.error_summary.splitlines()[0] if run.error_summary else "",
+    }
+
+
+@router.get("/sources/progress")
+def sources_progress(
+    db: Session = Depends(db_session),
+    who: CurrentUser = Depends(require(Permission.MANAGE_SOURCES)),
+) -> dict[str, Any]:
+    """The latest run of every source, for the live view on the sources page.
+
+    Polled by the page while any run is active. Counts only; no URL and no
+    page content leaves through here.
+    """
+    sources = list(db.execute(select(Source.id)).scalars())
+    runs: dict[str, Any] = {}
+    for source_id in sources:
+        latest = db.execute(
+            select(CrawlRun)
+            .where(CrawlRun.source_id == source_id)
+            .order_by(CrawlRun.started_at.desc().nullslast())
+            .limit(1)
+        ).scalar_one_or_none()
+        runs[str(source_id)] = run_progress(latest)
+    return {"runs": runs, "any_active": any(r and r["active"] for r in runs.values())}
+
+
 def _canton_options():  # type: ignore[no-untyped-def]
     """The cantons a source can belong to, for the creation form."""
     from app.cantons import CANTONS
@@ -349,6 +405,8 @@ def sources_page(
             sources=sources,
             latest_runs=latest_runs,
             cantons=_canton_options(),
+            canton_labels={canton.slug: canton.label for canton in _canton_options()},
+            run_active=run_is_active,
             allowed_hosts=get_settings().allowed_hosts,
             message=t(message, language) if message and message in STRINGS else "",
             problems=shown_problems,

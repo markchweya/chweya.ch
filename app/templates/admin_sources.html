@@ -1,8 +1,8 @@
-{# Sources: what the crawler may fetch, and the button that makes it fetch.
+{# Sources: what the crawler may fetch, and the controls that make it fetch.
 
-   The run state is a word, never a colour. The crawl runs in the background;
-   reloading this page is how progress is read, which is stated on the page
-   rather than left for the administrator to discover. #}
+   Each source is a card. Its run line reports the latest run, and while a
+   run is active the page's script refreshes that line every two seconds
+   with the server's counts. The state is a word, never a colour. #}
 {% extends "base.html" %}
 {% block title %}Sources · Dumi{% endblock %}
 {% block body %}
@@ -11,14 +11,19 @@
     {% include "_mark.html" %} Dumi
     <span class="dumi-lockup__tag">{{ t('admin.title') }}</span>
   </span>
-  <a href="/admin">{{ t('admin.title') }}</a>
+  <nav class="bar__nav" aria-label="{{ t('admin.title') }}">
+    <a class="bar__link" href="/admin">{{ t('admin.title') }}</a>
+    <form method="post" action="/admin/logout">
+      <button type="submit" class="send">{{ t('auth.sign_out') }}</button>
+    </form>
+  </nav>
 </header>
 
 <main id="main" class="admin">
   <h1>Sources</h1>
 
   {% if message %}
-    <p class="auth__error" role="status">{{ message }}</p>
+    <p class="auth__notice" role="status">{{ message }}</p>
   {% endif %}
   {% if problems %}
     <div role="alert">
@@ -29,63 +34,65 @@
   {% endif %}
 
   {% if sources %}
-    <table class="grid">
-      <caption class="visually-hidden">Configured crawl sources</caption>
-      <thead>
-        <tr><th scope="col">Name</th><th scope="col">Base URL</th>
-            <th scope="col">Canton</th>
-            <th scope="col">Language</th><th scope="col">Last run</th>
-            <th scope="col">Action</th></tr>
-      </thead>
-      <tbody>
-        {% for source in sources %}
-          {% set run = latest_runs.get(source.id) %}
-          <tr>
-            <th scope="row">{{ source.name }}</th>
-            <td>{{ source.base_url }}</td>
-            <td>{{ source.canton | capitalize }}</td>
-            <td>{{ source.default_language | upper }}</td>
-            {# State is a word, not only a colour. #}
-            <td>
-              {% if run %}
-                {{ run.state }}
-                {% if run.started_at %} · {{ run.started_at.strftime('%d.%m.%Y %H:%M') }}{% endif %}
-                {% if run.state == 'completed' %}
-                  · {{ run.urls_fetched }} fetched, {{ run.versions_created }} new versions
+    <ul class="cards" aria-label="Configured crawl sources">
+      {% for source in sources %}
+        {% set run = latest_runs.get(source.id) %}
+        {% set active = run_active(run) %}
+        <li class="card source" data-source-id="{{ source.id }}" data-run-active="{{ 'true' if active else 'false' }}">
+          <div class="source__head">
+            <h2 class="source__name">{{ source.name }}</h2>
+            <span class="badge">{{ canton_labels.get(source.canton, source.canton | capitalize) }}</span>
+            <span class="badge badge--muted">{{ source.default_language | upper }}</span>
+            {% if source.is_paused %}<span class="badge badge--muted">paused</span>{% endif %}
+          </div>
+          <a class="source__url" href="{{ source.base_url }}" rel="noopener noreferrer" target="_blank">{{ source.base_url }}</a>
+
+          {# The run line. Rendered here for the first paint and for pages
+             without script; the script rewrites the same text afterwards. #}
+          <p class="source__run" data-run>
+            {% if run %}
+              {% if active %}
+                {% if run.phase == 'crawling' %}
+                  Crawling · {{ run.urls_fetched }} fetched{% if run.urls_unchanged %} · {{ run.urls_unchanged }} unchanged{% endif %}{% if run.versions_created %} · {{ run.versions_created }} new versions{% endif %}{% if run.urls_failed %} · {{ run.urls_failed }} failed{% endif %}{% if run.urls_blocked %} · {{ run.urls_blocked }} blocked{% endif %}
+                {% elif run.phase == 'indexing' %}
+                  Indexing for keyword search
+                {% elif run.phase == 'embedding' %}
+                  Embedding passages · {{ run.chunks_embedded }} passages embedded
+                {% else %}
+                  {{ run.phase }}
                 {% endif %}
-              {% elif source.is_paused %}
-                paused
               {% else %}
-                never crawled
+                {{ run.state }}{% if run.finished_at %} · {{ run.finished_at.strftime('%d.%m.%Y %H:%M') }}{% endif %}{% if run.state == 'completed' %} · {{ run.urls_fetched }} fetched · {{ run.versions_created }} new versions{% elif run.error_summary %} · {{ run.error_summary.splitlines()[0] }}{% endif %}
               {% endif %}
-            </td>
-            <td>
-              {% if run and run.state in ('queued', 'running') %}
-                running — reload this page for progress
-              {% else %}
-                <form method="post" action="/admin/sources/{{ source.id }}/crawl">
-                  <button type="submit" class="send">Crawl now</button>
-                </form>
-                {# Removes the source and every page it brought in. A wrong
-                   site filed under a canton would otherwise keep answering
-                   for it. #}
-                <form method="post" action="/admin/sources/{{ source.id }}/remove"
-                      onsubmit="return confirm({{ ('Remove ' ~ source.name ~ ' and all of its pages?') | tojson }});">
-                  <button type="submit" class="remove">Remove</button>
-                </form>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            {% else %}
+              Never crawled
+            {% endif %}
+          </p>
+
+          <div class="source__actions">
+            {% if not active %}
+              <form method="post" action="/admin/sources/{{ source.id }}/crawl">
+                <button type="submit" class="send">Crawl now</button>
+              </form>
+              {# Removes the source and every page it brought in. A wrong
+                 site filed under a canton would otherwise keep answering
+                 for it. #}
+              <form method="post" action="/admin/sources/{{ source.id }}/remove"
+                    onsubmit="return confirm({{ ('Remove ' ~ source.name ~ ' and all of its pages?') | tojson }});">
+                <button type="submit" class="remove">Remove</button>
+              </form>
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
   {% else %}
     <p>No sources configured. Add one below to give the crawler somewhere to go.</p>
   {% endif %}
 
-  <section aria-labelledby="new-source">
+  <section class="card card--form" aria-labelledby="new-source">
     <h2 id="new-source">Add a source</h2>
-    <p>
+    <p class="card__lead">
       A source is one area of an allowed site. The crawler reads its sitemap
       and follows links within the base path until the page budget for one
       run is spent, respecting robots.txt and pausing between requests. Only
@@ -93,29 +100,35 @@
       A base URL of https://www.zg.ch takes the whole portal; a crawl that
       size takes a while, and embedding it takes longer.
     </p>
-    <form class="auth__form" method="post" action="/admin/sources">
-      <label for="src-name">Name</label>
-      <input type="text" id="src-name" name="name" required maxlength="200"
-             placeholder="Behörden">
-
-      <label for="src-canton">Canton</label>
-      <select id="src-canton" name="canton">
-        {% for option in cantons %}
-          <option value="{{ option.slug }}">{{ option.label }}</option>
-        {% endfor %}
-      </select>
+    <form class="auth__form auth__form--wide" method="post" action="/admin/sources">
+      <div class="auth__row">
+        <div>
+          <label for="src-name">Name</label>
+          <input type="text" id="src-name" name="name" required maxlength="200"
+                 placeholder="Behörden">
+        </div>
+        <div>
+          <label for="src-canton">Canton</label>
+          <select id="src-canton" name="canton">
+            {% for option in cantons %}
+              <option value="{{ option.slug }}">{{ option.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="src-lang">Primary language</label>
+          <select id="src-lang" name="default_language">
+            <option value="de" selected>DE</option>
+            <option value="en">EN</option>
+            <option value="fr">FR</option>
+            <option value="it">IT</option>
+          </select>
+        </div>
+      </div>
 
       <label for="src-url">Base URL</label>
       <input type="url" id="src-url" name="base_url" required maxlength="2048"
-             placeholder="https://www.zug.ch/behoerden">
-
-      <label for="src-lang">Primary language</label>
-      <select id="src-lang" name="default_language">
-        <option value="de" selected>DE</option>
-        <option value="en">EN</option>
-        <option value="fr">FR</option>
-        <option value="it">IT</option>
-      </select>
+             placeholder="https://www.zg.ch">
 
       <label for="src-dept">Responsible office (optional)</label>
       <input type="text" id="src-dept" name="department" maxlength="200">
@@ -128,4 +141,8 @@
     </form>
   </section>
 </main>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/admin_sources.js?v={{ asset_version }}" defer></script>
 {% endblock %}

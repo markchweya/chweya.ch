@@ -198,6 +198,78 @@ class TestCrawlButton:
         assert client.scheduled == []
 
 
+class TestLiveProgress:
+    def source(self, client, content_db) -> Source:  # type: ignore[no-untyped-def]
+        sign_in(client, "content_admin")
+        create(client)
+        return content_db.execute(select(Source)).scalars().one()
+
+    def test_the_page_renders_each_source_as_a_card_with_its_run_state(self, client, content_db) -> None:  # type: ignore[no-untyped-def]
+        source = self.source(client, content_db)
+        html = client.get("/admin/sources").text
+        assert f'data-source-id="{source.id}"' in html
+        assert 'data-run-active="false"' in html
+        assert "Never crawled" in html
+        assert "reload this page" not in html
+        assert 'src="/static/admin_sources.js' in html
+
+    def test_progress_reports_the_latest_run_of_every_source(self, client, content_db) -> None:  # type: ignore[no-untyped-def]
+        source = self.source(client, content_db)
+        content_db.add(
+            CrawlRun(
+                source_id=source.id,
+                state=CrawlRunState.RUNNING.value,
+                phase="crawling",
+                urls_fetched=42,
+                versions_created=7,
+            )
+        )
+        content_db.commit()
+        payload = client.get("/admin/sources/progress").json()
+        run = payload["runs"][str(source.id)]
+        assert payload["any_active"] is True
+        assert run["active"] is True
+        assert run["phase"] == "crawling"
+        assert run["fetched"] == 42
+        assert run["versions"] == 7
+
+    def test_a_completed_run_still_embedding_counts_as_active(self, client, content_db) -> None:  # type: ignore[no-untyped-def]
+        """The crawl state turns to completed before embedding starts, and
+        embedding a portal takes longer than fetching it did."""
+        source = self.source(client, content_db)
+        content_db.add(
+            CrawlRun(
+                source_id=source.id,
+                state=CrawlRunState.COMPLETED.value,
+                phase="embedding",
+                chunks_embedded=500,
+            )
+        )
+        content_db.commit()
+        run = client.get("/admin/sources/progress").json()["runs"][str(source.id)]
+        assert run["active"] is True
+        assert run["embedded"] == 500
+        html = client.get("/admin/sources").text
+        assert 'data-run-active="true"' in html
+        assert "Embedding passages" in html
+        assert "Crawl now" not in html
+
+    def test_a_finished_run_is_not_active(self, client, content_db) -> None:  # type: ignore[no-untyped-def]
+        source = self.source(client, content_db)
+        content_db.add(
+            CrawlRun(source_id=source.id, state=CrawlRunState.COMPLETED.value, phase="done")
+        )
+        content_db.commit()
+        payload = client.get("/admin/sources/progress").json()
+        assert payload["any_active"] is False
+        assert payload["runs"][str(source.id)]["active"] is False
+
+    def test_progress_requires_the_sources_permission(self, client, content_db) -> None:  # type: ignore[no-untyped-def]
+        self.source(client, content_db)
+        sign_in(client, "auditor")
+        assert client.get("/admin/sources/progress").status_code == 403
+
+
 class TestRemoval:
     def source(self, client, content_db) -> Source:  # type: ignore[no-untyped-def]
         sign_in(client, "content_admin")
@@ -260,7 +332,7 @@ class TestRemoval:
     def test_the_page_shows_the_canton_and_a_remove_button(self, client, content_db) -> None:  # type: ignore[no-untyped-def]
         source = self.source(client, content_db)
         html = client.get("/admin/sources").text
-        assert "<td>Zug</td>" in html
+        assert '<span class="badge">Zug</span>' in html
         assert f'action="/admin/sources/{source.id}/remove"' in html
 
 

@@ -74,6 +74,9 @@ HANDLED_TYPES = {
 # unchanged. Version 2: tables are extracted as rows.
 EXTRACTION_VERSION = 2
 
+# How often a background run commits its counters for the sources page.
+PROGRESS_EVERY_PAGES = 10
+
 
 @dataclass
 class CrawlOutcome:
@@ -448,6 +451,19 @@ class Crawler:
 
     # ---------------------------------------------------------------- run
 
+    @staticmethod
+    def _write_counts(run: CrawlRun, outcome: CrawlOutcome) -> None:
+        """Copy the outcome's counters onto the run row."""
+        run.urls_discovered = outcome.discovered
+        run.urls_fetched = outcome.fetched
+        run.urls_unchanged = outcome.unchanged
+        run.urls_failed = outcome.failed
+        run.urls_blocked = outcome.blocked
+        run.documents_created = outcome.documents_created
+        run.versions_created = outcome.versions_created
+        run.blocked_reasons = dict(outcome.blocked_reasons)
+        run.error_summary = "\n".join(outcome.errors[:50])
+
     async def run(
         self,
         source: Source,
@@ -517,6 +533,15 @@ class Crawler:
                     if link not in queued:
                         queued.add(link)
                         frontier.append(link)
+                # The sources page reads the run row while the crawl is
+                # under way. Writing the counters every few pages is what
+                # makes that progress real rather than a frozen "running".
+                # Only when this run owns its transaction: a caller managing
+                # its own must not have it committed from underneath.
+                if commit_start and crawled % PROGRESS_EVERY_PAGES == 0:
+                    outcome.discovered = len(queued)
+                    self._write_counts(run, outcome)
+                    self._session.commit()
             outcome.discovered = len(queued)
 
             run.state = CrawlRunState.COMPLETED.value
@@ -530,15 +555,7 @@ class Crawler:
             outcome.errors.append(f"run_failed: {type(exc).__name__}")
 
         run.finished_at = _utcnow()
-        run.urls_discovered = outcome.discovered
-        run.urls_fetched = outcome.fetched
-        run.urls_unchanged = outcome.unchanged
-        run.urls_failed = outcome.failed
-        run.urls_blocked = outcome.blocked
-        run.documents_created = outcome.documents_created
-        run.versions_created = outcome.versions_created
-        run.blocked_reasons = dict(outcome.blocked_reasons)
-        run.error_summary = "\n".join(outcome.errors[:50])
+        self._write_counts(run, outcome)
 
         record(
             self._session,

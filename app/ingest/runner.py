@@ -67,6 +67,7 @@ def fail_orphaned_runs(db: Session) -> int:
     )
     for run in orphans:
         run.state = CrawlRunState.FAILED.value
+        run.phase = "done"
         run.finished_at = dt.datetime.now(dt.UTC)
         run.error_summary = (run.error_summary + "\n" if run.error_summary else "") + (
             "interrupted: the server restarted while this run was active"
@@ -97,6 +98,10 @@ async def _run_crawl(source_id: uuid.UUID, triggered_by_id: uuid.UUID | None) ->
         run = await Crawler(session, fetcher).run(
             source, triggered_by_id=triggered_by_id, commit_start=True
         )
+        # The crawl is over but the run is not: the sources page keeps
+        # reporting through indexing and embedding, which for a whole portal
+        # take longer than the fetching did.
+        run.phase = "indexing"
         session.commit()
 
         # Keyword retrieval works the moment this commits. Embedding loads a
@@ -104,6 +109,7 @@ async def _run_crawl(source_id: uuid.UUID, triggered_by_id: uuid.UUID | None) ->
         # available the semantic arm simply stays empty, which retrieval
         # already treats as a degraded search rather than a failure.
         indexed = update_search_vectors(session)
+        run.phase = "embedding"
         session.commit()
 
         embedded = 0
@@ -120,13 +126,17 @@ async def _run_crawl(source_id: uuid.UUID, triggered_by_id: uuid.UUID | None) ->
             # page run produced 583 chunks and a single batch stopped at 500.
             while True:
                 batch = await asyncio.to_thread(embed_pending_chunks, session, provider)
-                session.commit()
                 embedded += batch
+                run.chunks_embedded = embedded
+                session.commit()
                 if batch == 0:
                     break
         except Exception as exc:  # noqa: BLE001 - embeddings are best-effort here
             session.rollback()
             logger.warning("crawl.embedding_skipped", error=type(exc).__name__)
+
+        run.phase = "done"
+        session.commit()
 
         logger.info(
             "crawl.background_run_finished",
@@ -143,6 +153,15 @@ async def _run_crawl(source_id: uuid.UUID, triggered_by_id: uuid.UUID | None) ->
         # session cannot do it now.
         session.rollback()
         logger.exception("crawl.background_run_crashed", source_id=str(source_id))
+        # Whatever broke, the sources page must not report this run as live
+        # forever. Best effort: the database may be the thing that broke.
+        try:
+            run = active_run_for(session, source_id)
+            if run is not None:
+                run.phase = "done"
+                session.commit()
+        except Exception:  # noqa: BLE001
+            session.rollback()
     finally:
         _active.discard(source_id)
         await fetcher.aclose()

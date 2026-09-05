@@ -550,6 +550,16 @@ class CrawlRun(Base, TimestampMixin):
     versions_created: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+    # Where a live run is: crawling, indexing, embedding, done. The state
+    # above says whether the crawl itself succeeded; the phase says what the
+    # process is still doing afterwards, because embedding a large site takes
+    # longer than fetching it and the sources page reports both live.
+    phase: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="crawling", server_default="crawling"
+    )
+    chunks_embedded: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
     # Counts of refusals by reason, so the dashboard can show why URLs were
     # skipped without storing every skipped URL.
