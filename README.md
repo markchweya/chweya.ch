@@ -53,6 +53,10 @@ resolves `localhost` to IPv6 first and the connection hangs instead of
 falling back. For Ollama, `APERTUS_BASE_URL=http://localhost:11434/v1` and
 `APERTUS_MODEL` set to exactly what `ollama list` shows, tag included.
 
+Start Docker Desktop and wait until it reports that it is running. Until it
+does, `docker compose` fails with "cannot find the file specified" on the
+Docker pipe, and nothing below can reach the database.
+
 ```bat
 docker compose up -d db
 alembic upgrade head
@@ -63,6 +67,21 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 The bootstrap password prompt shows nothing while you type; that is normal.
 Set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` in `.env` to skip
 the prompt, and blank the password line after the first login.
+
+Every later session, from the project folder:
+
+```bat
+git pull
+.venv\Scripts\activate
+docker compose up -d db
+alembic upgrade head
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+`alembic upgrade head` is quick. If it stops with "Cannot reach the
+database", the container is not running: check Docker Desktop, then
+`docker compose ps` and `docker compose logs db --tail 10`, which should end
+with "ready to accept connections".
 
 ## Repository
 
