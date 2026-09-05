@@ -93,6 +93,38 @@ body {
 }
 .icon-button:hover { background: var(--dumi-ground); color: var(--dumi-ink); }
 
+/* Tooltips for the icon controls. The browser's own title tooltip is an
+ * unstyled system box that lands wherever the platform puts it; this one is
+ * drawn by the page, centred under the control, in the interface's own
+ * type. Decorative only: every control already has its name as hidden text,
+ * so nothing depends on the tooltip being read. Shown on hover and on
+ * keyboard focus alike, and hidden while a menu it belongs to is open. */
+[data-tip] { position: relative; }
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  background: var(--dumi-ink);
+  color: var(--dumi-ground);
+  font-family: var(--dumi-font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after { opacity: 1; }
+details[open] > [data-tip]::after { display: none; }
+
 /* The language menu: a native disclosure behind the translate glyph. */
 .lang-menu { position: relative; }
 .lang-menu__summary {
@@ -170,10 +202,18 @@ body {
 
 /* --- transcript ---------------------------------------------------------- */
 .chat {
+  display: flex;
+  flex-direction: column;
+  /* Fill the viewport below the header, so the composer sits at the bottom
+   * of the screen even when the transcript holds one exchange. Without
+   * this a sticky composer only sticks once the page outgrows the
+   * viewport; before that it floated mid-screen above an empty half page. */
+  min-height: calc(100dvh - 4.75rem);
   max-width: var(--chat-max);
   margin: 0 auto;
-  padding: 1rem 1rem 6rem;
+  padding: 1rem 1rem 0.5rem;
 }
+.chat .transcript { flex: 1; }
 
 /* The welcome state: mark, intro and composer centred in the viewport,
  * suggestions beneath. It exists only while the transcript is empty. */
@@ -185,6 +225,7 @@ body {
   padding-bottom: 2rem;
 }
 .chat--welcome .ask { position: static; margin-top: 0; }
+.chat--welcome .transcript { flex: 0; }
 
 .hero {
   display: flex;
@@ -467,8 +508,8 @@ html:has(#transcript)::-webkit-scrollbar { display: none; }
 .ask {
   position: sticky;
   bottom: 0;
-  margin-top: 1.5rem;
-  padding: 0.75rem 0;
+  margin-top: auto;
+  padding: 1.5rem 0 0.75rem;
   background: var(--dumi-ground);
 }
 .ask__box {

@@ -17,7 +17,7 @@
        With a single canton configured it is plain text. #}
     {% if cantons | length > 1 %}
     <details class="lang-menu canton-menu">
-      <summary class="canton-menu__summary" title="{{ t('chat.canton') }}">
+      <summary class="canton-menu__summary" data-tip="{{ t('chat.canton') }}">
         <span class="dumi-lockup__canton">{{ canton.label }}</span>
         <svg class="canton-menu__chevron" viewBox="0 0 24 24" width="16" height="16"
              fill="none" stroke="currentColor" stroke-width="2.5"
@@ -41,8 +41,8 @@
   <div class="bar__controls">
   {# A fresh chat is a fresh page: nothing is stored server-side, and users
      do not log in, so there is no history to manage. An icon-only control,
-     with its name as real hidden text and a title for pointer users. #}
-  <a class="icon-button" href="/?lang={{ language }}&amp;canton={{ canton.slug }}" title="{{ t('chat.new_chat') }}">
+     with its name as real hidden text and a drawn tooltip for pointer users. #}
+  <a class="icon-button" href="/?lang={{ language }}&amp;canton={{ canton.slug }}" data-tip="{{ t('chat.new_chat') }}">
     <span class="visually-hidden">{{ t('chat.new_chat') }}</span>
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -56,7 +56,7 @@
      are links in their own language; aria-current marks the active one, so
      the choice is conveyed by more than colour. #}
   <details class="lang-menu">
-    <summary class="icon-button lang-menu__summary" title="{{ t('chat.language') }}">
+    <summary class="icon-button lang-menu__summary" data-tip="{{ t('chat.language') }}">
       <span class="visually-hidden">{{ t('chat.language') }}</span>
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -140,7 +140,7 @@
       {# Icon buttons. The accessible name is real text, visually hidden; an
          aria-label alone would leave nothing for a translation audit to see.
          The icons are aria-hidden so the name is announced exactly once. #}
-      <button type="submit" id="send" class="send" title="{{ t('chat.send') }}">
+      <button type="submit" id="send" class="send" data-tip="{{ t('chat.send') }}">
         <span class="visually-hidden">{{ t('chat.send') }}</span>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -150,7 +150,7 @@
       {# Swapped in for the send button while a request is in flight. Section
          15 requires a way to stop generated output; the square is the same
          glyph every media control uses for stop. #}
-      <button type="button" id="stop" class="stop" title="{{ t('chat.stop') }}" hidden>
+      <button type="button" id="stop" class="stop" data-tip="{{ t('chat.stop') }}" hidden>
         <span class="visually-hidden">{{ t('chat.stop') }}</span>
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>

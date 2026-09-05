@@ -364,7 +364,7 @@
       var button = document.createElement("button");
       button.type = "button";
       button.className = "feedback__button";
-      button.title = label;
+      button.setAttribute("data-tip", label);
       button.setAttribute("aria-pressed", "false");
       var name = document.createElement("span");
       name.className = "visually-hidden";
