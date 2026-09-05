@@ -392,11 +392,21 @@ class TestAnswering:
         html = client.post(
             "/ask", data={"question": "Was kostet die Anmeldung?", "lang": "de"}
         ).text
-        assert "<p>Die Anmeldung ist einfach [1].</p>" in html
-        assert "<li>Pass [1]</li>" in html
-        assert "<li>Mietvertrag [1]</li>" in html
+        assert '<p>Die Anmeldung ist einfach<sup class="cite">1</sup>.</p>' in html
+        assert '<li>Pass<sup class="cite">1</sup></li>' in html
+        assert '<li>Mietvertrag<sup class="cite">1</sup></li>' in html
         assert "<ol>" in html
-        assert "<li>Formular senden [1]</li>" in html
+        assert '<li>Formular senden<sup class="cite">1</sup></li>' in html
+
+    def test_citation_chips_never_render_model_text_as_html(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The chip filter writes markup only for the markers it recognises;
+        angle brackets in the answer stay text."""
+        client.stub.text = "Die Gebuehr <b>betraegt</b> 20 Franken [1]."
+        html = client.post(
+            "/ask", data={"question": "Was kostet die Anmeldung?", "lang": "de"}
+        ).text
+        assert "&lt;b&gt;betraegt&lt;/b&gt;" in html
+        assert '<sup class="cite">1</sup>' in html
 
     def test_the_page_renders_pipe_rows_as_a_table(self, client) -> None:  # type: ignore[no-untyped-def]
         """The first row is the header; the rest are data rows."""

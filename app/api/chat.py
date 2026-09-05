@@ -14,6 +14,7 @@ one surface can answer something the other cannot.
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -21,6 +22,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup, escape
 from sqlalchemy.orm import Session
 
 from app.api.ratelimit import FixedWindowLimiter, client_key
@@ -46,6 +48,24 @@ router = APIRouter(tags=["chat"])
 templates = Jinja2Templates(directory="app/templates")
 templates.env.globals["asset_version"] = asset_version()
 templates.env.filters["answer_blocks"] = answer_blocks
+
+
+# The space the model puts before a marker is swallowed: the chip carries its
+# own spacing, and "days [1]." would otherwise render as "days ¹ .".
+_CITE = re.compile(r" ?\[(\d{1,2})\]")
+
+
+def cite_marks(text: str) -> Markup:
+    """Render bracketed citation numbers as small chips.
+
+    The text is escaped first; only the markers this function writes are
+    markup. Nothing the model wrote is rendered as HTML.
+    """
+    escaped = str(escape(text))
+    return Markup(_CITE.sub(r'<sup class="cite">\1</sup>', escaped))
+
+
+templates.env.filters["cite_marks"] = cite_marks
 
 # Each language named in itself, which is the one spelling every reader of
 # that language recognises. Translating the names would defeat the point.

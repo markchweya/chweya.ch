@@ -26,14 +26,14 @@
       <div class="msg__text msg__text--blocks">
         {% for block in message.text | answer_blocks %}
           {% if block.kind == 'paragraph' %}
-            <p>{{ block.text }}</p>
+            <p>{{ block.text | cite_marks }}</p>
           {% elif block.kind == 'list' %}
             <ul>
-              {% for entry in block.entries %}<li>{{ entry }}</li>{% endfor %}
+              {% for entry in block.entries %}<li>{{ entry | cite_marks }}</li>{% endfor %}
             </ul>
           {% elif block.kind == 'steps' %}
             <ol{% if block.start > 1 %} start="{{ block.start }}"{% endif %}>
-              {% for entry in block.entries %}<li>{{ entry }}</li>{% endfor %}
+              {% for entry in block.entries %}<li>{{ entry | cite_marks }}</li>{% endfor %}
             </ol>
           {% elif block.kind == 'pairs' %}
             {# A list whose every item was "Label: value" is tabular data
@@ -42,7 +42,7 @@
             <div class="answer-table answer-table--pairs">
               <table>
                 {% for row in block.rows %}
-                  <tr><th scope="row">{{ row[0] }}</th><td>{{ row[1] }}</td></tr>
+                  <tr><th scope="row">{{ row[0] | cite_marks }}</th><td>{{ row[1] | cite_marks }}</td></tr>
                 {% endfor %}
               </table>
             </div>
@@ -54,9 +54,9 @@
               <table>
                 {% for row in block.rows %}
                   {% if loop.first %}
-                    <tr>{% for cell in row %}<th scope="col">{{ cell }}</th>{% endfor %}</tr>
+                    <tr>{% for cell in row %}<th scope="col">{{ cell | cite_marks }}</th>{% endfor %}</tr>
                   {% else %}
-                    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                    <tr>{% for cell in row %}<td>{{ cell | cite_marks }}</td>{% endfor %}</tr>
                   {% endif %}
                 {% endfor %}
               </table>

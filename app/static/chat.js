@@ -229,7 +229,7 @@
         if (index === 0) {
           box.setAttribute("scope", "col");
         }
-        box.textContent = cell.trim();
+        writeWithCites(box, cell.trim());
         tr.appendChild(box);
       });
       table.appendChild(tr);
@@ -243,6 +243,29 @@
 
   // A list item shaped "Label: value", mirroring the server's rule.
   var LABELED_ITEM = /^([^:]{2,40}):\s+(.+)$/;
+
+  // Bracketed citation numbers become small chips, as the server renders
+  // them. Everything else is a text node; nothing the model wrote becomes
+  // markup.
+  var CITE = / ?\[(\d{1,2})\]/g;
+  function writeWithCites(element, text) {
+    var last = 0;
+    var match;
+    CITE.lastIndex = 0;
+    while ((match = CITE.exec(text)) !== null) {
+      if (match.index > last) {
+        element.appendChild(document.createTextNode(text.slice(last, match.index)));
+      }
+      var chip = document.createElement("sup");
+      chip.className = "cite";
+      chip.textContent = match[1];
+      element.appendChild(chip);
+      last = match.index + match[0].length;
+    }
+    if (last < text.length) {
+      element.appendChild(document.createTextNode(text.slice(last)));
+    }
+  }
 
   // The final answer is rendered as blocks, mirroring the server template:
   // blank lines separate paragraphs, "- " lines become a list, numbered
@@ -286,9 +309,9 @@
             var tr = document.createElement("tr");
             var label = document.createElement("th");
             label.setAttribute("scope", "row");
-            label.textContent = match[1];
+            writeWithCites(label, match[1]);
             var value = document.createElement("td");
-            value.textContent = match[2];
+            writeWithCites(value, match[2]);
             tr.appendChild(label);
             tr.appendChild(value);
             pairTable.appendChild(tr);
@@ -299,7 +322,7 @@
           var list = document.createElement("ul");
           entries.forEach(function (entry) {
             var item = document.createElement("li");
-            item.textContent = entry;
+            writeWithCites(item, entry);
             list.appendChild(item);
           });
           target.appendChild(list);
@@ -312,7 +335,7 @@
         }
         while (i < lines.length && STEP_LINE.test(lines[i].trim())) {
           var step = document.createElement("li");
-          step.textContent = lines[i].trim().replace(STEP_LINE, "");
+          writeWithCites(step, lines[i].trim().replace(STEP_LINE, ""));
           steps.appendChild(step);
           i += 1;
         }
@@ -328,7 +351,7 @@
           i += 1;
         }
         var paragraph = document.createElement("p");
-        paragraph.textContent = prose.join(" ");
+        writeWithCites(paragraph, prose.join(" "));
         target.appendChild(paragraph);
       } else {
         i += 1;

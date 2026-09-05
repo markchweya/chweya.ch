@@ -290,7 +290,7 @@ class TestPromptConstruction:
     def test_the_system_message_refuses_to_accept_user_claims_as_fact(self) -> None:
         outcome = assess(found(chunk(), chunk(title="B")), "Was kostet das?", now=NOW)
         system = build_prompt("Was kostet das?", outcome).request.messages[0].content
-        assert "established fact" in system.lower()
+        assert "claim as fact" in system.lower()
 
     def test_emergency_instructions_are_included_when_relevant(self) -> None:
         outcome = assess(found(chunk()), "Ich brauche sofort die Polizei", now=NOW)

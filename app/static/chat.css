@@ -330,6 +330,24 @@ details[open] > [data-tip]::after { display: none; }
 .msg__text--blocks li::marker { color: var(--dumi-ink-soft); }
 .msg__text--blocks > :last-child { margin-bottom: 0; }
 
+/* A citation number in the text: a small chip that matches its entry in the
+ * sources list below the answer. Raised like a footnote mark, tinted with
+ * the flow token, never a bare bracket. */
+.cite {
+  display: inline-block;
+  min-width: 1.35em;
+  margin-left: 0.15em;
+  padding: 0 0.35em;
+  border-radius: 999px;
+  background: rgb(var(--dumi-flow-rgb) / 0.18);
+  color: var(--dumi-ink);
+  font-size: 0.7em;
+  font-weight: 600;
+  line-height: 1.6;
+  text-align: center;
+  vertical-align: 0.45em;
+}
+
 /* The waiting sentence beside the thinking mark. Static text with no
  * animation of its own: the mark's motion carries the state, this says it
  * in words. */
