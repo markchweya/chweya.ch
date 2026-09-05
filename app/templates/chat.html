@@ -10,32 +10,35 @@
 <header class="bar">
   <span class="dumi-lockup">
     {% include "_mark.html" %}
-    Dumi <span class="dumi-lockup__canton">{{ canton.label }}</span>
+    Dumi
+    {# The canton word is the canton switch: "Dumi Zug" reads as one name,
+       and clicking Zug offers the other cantons this deployment serves.
+       A native disclosure, so it works without script and by keyboard.
+       With a single canton configured it is plain text. #}
+    {% if cantons | length > 1 %}
+    <details class="lang-menu canton-menu">
+      <summary class="canton-menu__summary" title="{{ t('chat.canton') }}">
+        <span class="dumi-lockup__canton">{{ canton.label }}</span>
+        <svg class="canton-menu__chevron" viewBox="0 0 24 24" width="16" height="16"
+             fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+        <span class="visually-hidden">{{ t('chat.canton') }}</span>
+      </summary>
+      <nav class="lang-menu__list canton-menu__list" aria-label="{{ t('chat.canton') }}">
+        {% for option in cantons %}
+          <a href="/?canton={{ option.slug }}&amp;lang={{ language }}"
+             {% if option.slug == canton.slug %}aria-current="true"{% endif %}>{{ option.label }}</a>
+        {% endfor %}
+      </nav>
+    </details>
+    {% else %}
+    <span class="dumi-lockup__canton">{{ canton.label }}</span>
+    {% endif %}
   </span>
 
   <div class="bar__controls">
-  {# The canton menu: the same interface serves several cantons, and
-     switching starts a fresh page for the chosen one. Hidden when only one
-     canton is configured. #}
-  {% if cantons | length > 1 %}
-  <details class="lang-menu canton-menu">
-    <summary class="icon-button lang-menu__summary" title="{{ t('chat.canton') }}">
-      <span class="visually-hidden">{{ t('chat.canton') }}</span>
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12 21s-7-5.1-7-11a7 7 0 0 1 14 0c0 5.9-7 11-7 11Z"/>
-        <circle cx="12" cy="10" r="2.5"/>
-      </svg>
-      <span class="lang-menu__code" aria-hidden="true">{{ canton.label }}</span>
-    </summary>
-    <nav class="lang-menu__list" aria-label="{{ t('chat.canton') }}">
-      {% for option in cantons %}
-        <a href="/?canton={{ option.slug }}&amp;lang={{ language }}"
-           {% if option.slug == canton.slug %}aria-current="true"{% endif %}>{{ option.label }}</a>
-      {% endfor %}
-    </nav>
-  </details>
-  {% endif %}
   {# A fresh chat is a fresh page: nothing is stored server-side, and users
      do not log in, so there is no history to manage. An icon-only control,
      with its name as real hidden text and a title for pointer users. #}

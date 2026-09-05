@@ -134,6 +134,40 @@ body {
   text-decoration: underline;
 }
 
+/* The canton word inside the lockup is the canton switch. It keeps the
+ * lockup's own type and colour; only a small chevron says it opens. The
+ * list drops from the left edge, under the word, and returns to body type
+ * so the options read as a menu rather than as more wordmark. */
+.canton-menu { display: inline-flex; }
+.canton-menu__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+}
+.canton-menu__summary::-webkit-details-marker { display: none; }
+.canton-menu__summary:focus-visible {
+  outline: 3px solid var(--dumi-flow);
+  outline-offset: 3px;
+}
+.canton-menu__chevron {
+  color: var(--dumi-flow);
+  transition: transform 0.15s ease;
+}
+.canton-menu[open] .canton-menu__chevron { transform: rotate(180deg); }
+.canton-menu__list {
+  left: 0;
+  right: auto;
+  font-family: var(--dumi-font-body);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
 /* --- transcript ---------------------------------------------------------- */
 .chat {
   max-width: var(--chat-max);
