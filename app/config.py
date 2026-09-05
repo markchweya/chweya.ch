@@ -12,6 +12,7 @@ the middle of a user request.
 from __future__ import annotations
 
 import hashlib
+import re
 from enum import StrEnum
 from functools import lru_cache
 from typing import Annotated, Literal
@@ -101,8 +102,15 @@ KNOWN_UNSAFE_CREDENTIAL_DIGESTS: frozenset[str] = frozenset(
 
 SUPPORTED_LANGUAGES: tuple[str, ...] = ("de", "en", "fr", "it")
 """The four languages the assistant must answer in. German first: it is the
-official language of the Canton of Zug and the language most sources are
+official language of the cantons served and the language most sources are
 published in."""
+
+# A bare hostname: labels of letters, digits and hyphens joined by dots. No
+# scheme, path, port, brackets or spaces.
+HOSTNAME_PATTERN = re.compile(
+    r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$",
+    re.IGNORECASE,
+)
 
 
 def is_known_unsafe_credential(value: str) -> bool:
@@ -245,9 +253,24 @@ class Settings(BaseSettings):
     @field_validator("crawler_allowed_hosts")
     @classmethod
     def _reject_empty_allowlist(cls, value: str) -> str:
-        """An empty allowlist would mean "crawl anything", so refuse it."""
-        if not [h.strip() for h in value.split(",") if h.strip()]:
+        """An empty allowlist would mean "crawl anything", so refuse it.
+
+        Each entry must also be a bare hostname. A value pasted from a chat
+        or a rendered document arrives with brackets, a scheme or a path
+        attached, and every entry it corrupts silently stops matching, so
+        the crawl refuses hosts the operator believes are allowed.
+        """
+        entries = [h.strip() for h in value.split(",") if h.strip()]
+        if not entries:
             raise ValueError("CRAWLER_ALLOWED_HOSTS must list at least one hostname")
+        for entry in entries:
+            if not HOSTNAME_PATTERN.match(entry):
+                raise ValueError(
+                    f"CRAWLER_ALLOWED_HOSTS entry {entry!r} is not a hostname. "
+                    "Use a plain comma-separated list such as "
+                    "www.zg.ch,zg.ch,www.uri.ch,uri.ch with no brackets, "
+                    "scheme or path."
+                )
         return value
 
     @field_validator("public_base_url", "apertus_base_url")

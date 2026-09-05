@@ -193,6 +193,27 @@ class TestAllowlistValidation:
         settings = production_settings(crawler_allowed_hosts="WWW.Zug.CH, zug.ch ")
         assert settings.allowed_hosts == ("www.zug.ch", "zug.ch")
 
+    def test_a_mangled_entry_is_refused_by_name(self) -> None:
+        """The failure seen in the wild: a value pasted from a rendered
+        document arrives as a Markdown link. Every entry it corrupts would
+        silently stop matching, so the whole value is refused with the bad
+        entry named."""
+        mangled = "[www.zug.ch,zug.ch,www.zg.ch,zg.ch](https://www.zug.ch,zg.ch)"
+        with pytest.raises(ValidationError) as info:
+            production_settings(crawler_allowed_hosts=mangled)
+        assert "[www.zug.ch" in str(info.value)
+
+    def test_a_scheme_or_path_is_refused(self) -> None:
+        for bad in ("https://www.zg.ch", "www.zg.ch/behoerden", "www.zg.ch:443"):
+            with pytest.raises(ValidationError):
+                production_settings(crawler_allowed_hosts=bad)
+
+    def test_plain_hostnames_pass(self) -> None:
+        settings = production_settings(
+            crawler_allowed_hosts="www.zug.ch,zug.ch,www.zg.ch,zg.ch,www.uri.ch,uri.ch"
+        )
+        assert len(settings.allowed_hosts) == 6
+
     def test_user_agent_includes_the_contact(self) -> None:
         settings = production_settings(crawler_contact="ops@example.ch")
         assert "ops@example.ch" in settings.user_agent
