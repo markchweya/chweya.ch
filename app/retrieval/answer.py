@@ -414,6 +414,75 @@ def tidy_layout(text: str) -> str:
     return text.strip()
 
 
+# Narration about the model's own inputs, which the prompt forbids and a
+# small model produces anyway. "The passage [1] states that you should
+# notify the authorities." is rewritten to "You should notify the
+# authorities [1]." The reader never saw a passage; they see an answer and
+# numbered sources, and the number is all that carries over.
+_META_LEAD = re.compile(
+    r"(?:according to|based on|as stated in|as mentioned in|as described in)\s+"
+    r"(?:the\s+)?passage\s*\[(\d{1,2})\],?\s*",
+    re.IGNORECASE,
+)
+_META_VERB = re.compile(
+    r"(?:the\s+)?passage\s*\[(\d{1,2})\]\s+(?:also\s+|further\s+)?"
+    r"(?:states|mentions|says|notes|indicates|explains|provides|confirms|"
+    r"describes|shows|specifies|suggests|recommends)\s+(?:that\s+)?",
+    re.IGNORECASE,
+)
+_EVIDENCE_WORDS = [
+    (re.compile(r"\bin the (?:given|provided|available|retrieved) evidence\b", re.IGNORECASE), "on the cited pages"),
+    (re.compile(r"\bin the evidence (?:given|provided)\b", re.IGNORECASE), "on the cited pages"),
+    (re.compile(r"\bthe (?:given|provided|available|retrieved) evidence\b", re.IGNORECASE), "the cited pages"),
+    (re.compile(r"\bthe evidence (?:given|provided)\b", re.IGNORECASE), "the cited pages"),
+    (re.compile(r"\bthe (?:given|provided|retrieved) passages\b", re.IGNORECASE), "the cited pages"),
+    (re.compile(r"\bin den (?:vorliegenden|bereitgestellten) (?:Passagen|Textstellen|Unterlagen)\b"), "auf den zitierten Seiten"),
+    (re.compile(r"\bden (?:vorliegenden|bereitgestellten) (?:Passagen|Textstellen|Unterlagen)\b"), "den zitierten Seiten"),
+]
+_SENTENCE_END = re.compile(r"[.!?]+$")
+
+
+def _rewrite_sentence(sentence: str) -> str:
+    numbers: list[str] = []
+
+    def grab(match: re.Match[str]) -> str:
+        numbers.append(match.group(1))
+        return ""
+
+    rewritten = _META_VERB.sub(grab, _META_LEAD.sub(grab, sentence))
+    if not numbers:
+        return sentence
+    rewritten = rewritten.lstrip()
+    if rewritten:
+        rewritten = rewritten[0].upper() + rewritten[1:]
+    for number in numbers:
+        marker = f"[{number}]"
+        if marker in rewritten:
+            continue
+        end = _SENTENCE_END.search(rewritten)
+        if end:
+            rewritten = rewritten[: end.start()].rstrip() + " " + marker + end.group(0)
+        else:
+            rewritten = rewritten.rstrip() + " " + marker
+    return rewritten
+
+
+def humanise_meta(text: str) -> str:
+    """Rewrite narration about passages and evidence into direct statements.
+
+    Runs after the markers have been validated, so moving a number to the
+    end of its sentence changes nothing the citation check relied on.
+    """
+    lines = []
+    for line in text.split("\n"):
+        sentences = re.split(r"(?<=[.!?])\s+", line)
+        lines.append(" ".join(_rewrite_sentence(s) for s in sentences))
+    result = "\n".join(lines)
+    for pattern, replacement in _EVIDENCE_WORDS:
+        result = pattern.sub(replacement, result)
+    return result
+
+
 def _notices_for(assessment: EvidenceAssessment) -> list[str]:
     """Message keys the interface must display alongside the answer."""
     notices: list[str] = []
@@ -580,7 +649,7 @@ def finalise_answer(text: str, was_truncated: bool, prepared: PreparedAnswer) ->
     cleaned, kept, invented = validate_citations(
         strip_markup(text), len(prompt.cited_chunks)
     )
-    cleaned = tidy_layout(cleaned)
+    cleaned = humanise_meta(tidy_layout(cleaned))
 
     if invented:
         logger.warning(

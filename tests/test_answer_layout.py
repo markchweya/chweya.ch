@@ -6,7 +6,7 @@ step that drops a trailing line of bare citation markers, and the block
 splitter the template and the client script both follow.
 """
 
-from app.retrieval.answer import tidy_layout
+from app.retrieval.answer import humanise_meta, tidy_layout
 from app.retrieval.layout import answer_blocks
 
 
@@ -106,3 +106,43 @@ class TestAnswerBlocks:
         )
         kinds = [block["kind"] for block in answer_blocks(text)]
         assert kinds == ["paragraph", "table", "paragraph", "list"]
+
+
+class TestHumaniseMeta:
+    """The narration seen in a real answer, and what the reader gets instead."""
+
+    def test_passage_states_that_becomes_a_direct_sentence(self) -> None:
+        text = "The passage [1] states that you should notify the authorities of your new address."
+        assert humanise_meta(text) == "You should notify the authorities of your new address [1]."
+
+    def test_according_to_passage_is_dropped_and_the_number_kept(self) -> None:
+        text = "According to passage [2], the office is located at Antiqua 37, Steinhausen."
+        assert humanise_meta(text) == "The office is located at Antiqua 37, Steinhausen [2]."
+
+    def test_also_mentions_is_handled(self) -> None:
+        text = "The passage [3] also mentions that you should contact the relevant authorities."
+        assert humanise_meta(text) == "You should contact the relevant authorities [3]."
+
+    def test_evidence_words_become_the_cited_pages(self) -> None:
+        text = "The exact steps are not provided in the given evidence."
+        assert humanise_meta(text) == "The exact steps are not provided on the cited pages."
+
+    def test_a_number_already_in_the_sentence_is_not_doubled(self) -> None:
+        text = "Passage [1] states that the fee is 20 francs [1]."
+        assert humanise_meta(text) == "The fee is 20 francs [1]."
+
+    def test_ordinary_sentences_are_untouched(self) -> None:
+        text = "Report your move within 14 days [1].\n\n1. Bring your identity card [1]\n2. Pay CHF 20 [2]"
+        assert humanise_meta(text) == text
+
+    def test_several_sentences_in_one_paragraph(self) -> None:
+        text = (
+            "To register a change of address in Zug, you need to inform the authorities. "
+            "The passage [1] states that you should notify them if you have moved. "
+            "The passage [4] provides further information on how to register."
+        )
+        assert humanise_meta(text) == (
+            "To register a change of address in Zug, you need to inform the authorities. "
+            "You should notify them if you have moved [1]. "
+            "Further information on how to register [4]."
+        )
