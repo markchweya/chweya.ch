@@ -17,7 +17,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
 from app.api import admin, admin_review, admin_uploads, chat, health
 from app.config import Environment, get_settings
@@ -59,14 +59,30 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # forever. Best-effort: an unreachable database must not stop the process
     # from starting, because /readyz is how that condition gets reported.
     try:
-        from app.db.session import get_session_factory
+        from app.db.schema import schema_lag
+        from app.db.session import get_engine, get_session_factory
         from app.ingest.runner import fail_orphaned_runs
+
+        # Say so before the first page reads a column that is not there.
+        lag = schema_lag(get_engine())
+        if lag is not None:
+            logger.warning(
+                "database.migrations_pending",
+                current=lag.current or "(none)",
+                head=lag.head,
+                hint="The database schema is behind the code. Run `alembic upgrade head`.",
+            )
 
         with get_session_factory()() as db:
             fail_orphaned_runs(db)
             db.commit()
     except Exception as exc:  # noqa: BLE001 - startup must survive a down database
         logger.warning("crawl.orphan_cleanup_skipped", error=type(exc).__name__)
+        if isinstance(exc, ProgrammingError):
+            logger.warning(
+                "database.migrations_pending",
+                hint="A column or table the code expects is missing. Run `alembic upgrade head`.",
+            )
         if isinstance(exc, OperationalError):
             logger.warning(
                 "database.unreachable",

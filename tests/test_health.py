@@ -77,3 +77,12 @@ def test_readyz_reports_each_dependency() -> None:
         detail = str(check.get("detail", ""))
         assert "postgresql://" not in detail
         assert "password" not in detail.lower()
+
+
+def test_the_schema_check_finds_nothing_missing_on_a_migrated_database(db) -> None:  # type: ignore[no-untyped-def]
+    """The test database is migrated to head, so the startup check that warns
+    about pending migrations must be quiet here; a false alarm on every
+    start would teach operators to ignore it."""
+    from app.db.schema import schema_lag
+
+    assert schema_lag(db.get_bind()) is None
