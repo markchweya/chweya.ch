@@ -27,6 +27,7 @@ from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 
 from app.db.models.content import ExtractionQuality
+from app.ingest.textclean import strip_control_characters
 from app.observability import get_logger
 
 logger = get_logger(__name__)
@@ -294,6 +295,9 @@ def extract_pdf(data: bytes, *, filename: str | None = None) -> ExtractedPdf:
             result.pages.append(PdfPage(number=index, text=""))
             continue
 
+        text, removed = strip_control_characters(text)
+        if removed and "control_characters_removed" not in result.notes:
+            result.notes.append("control_characters_removed")
         text = text.replace("\xa0", " ").strip()
         total_characters += len(text)
         if total_characters > MAX_TEXT_CHARACTERS:

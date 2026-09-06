@@ -25,7 +25,8 @@ from __future__ import annotations
 
 import datetime as dt
 from collections import Counter, deque
-from dataclasses import dataclass, field
+from urllib.parse import urlsplit
+from dataclasses import dataclass, field, replace
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -45,6 +46,7 @@ from app.db.models import (
 )
 from app.db.models.content import ExtractionQuality, PublicationState, SourceKind
 from app.ingest.chunking import chunk_page, chunk_pdf
+from app.ingest.textclean import strip_control_characters
 from app.ingest.extract_html import extract_html, extract_links
 from app.ingest.extract_pdf import extract_pdf
 from app.ingest.fetcher import GuardedFetcher
@@ -198,6 +200,28 @@ class Crawler:
             self._session.add(record_row)
             self._session.flush()
         return record_row
+
+    async def _crawl_one(self, url: str, source: Source, outcome: CrawlOutcome) -> list[str]:
+        """Crawl one URL inside a savepoint, so one bad page costs one page.
+
+        A run through four thousand pages met one PDF whose text the
+        database refused, and the failed flush took the whole run down with
+        it. The savepoint confines the damage to that page: its work is
+        rolled back, it is counted as failed with the reason, and the crawl
+        continues.
+        """
+        try:
+            with self._session.begin_nested():
+                return await self.crawl_url(url, source, outcome)
+        except Exception as exc:  # noqa: BLE001 - counted and reported, never fatal
+            logger.warning(
+                "crawl.page_failed",
+                url_path=urlsplit(url).path[:300],
+                error=type(exc).__name__,
+            )
+            outcome.failed += 1
+            outcome.errors.append(f"{type(exc).__name__}: {url}")
+            return []
 
     async def crawl_url(self, url: str, source: Source, outcome: CrawlOutcome) -> list[str]:
         """Fetch, extract and persist one URL.
@@ -377,6 +401,13 @@ class Crawler:
             + 1
         )
 
+        # Belt to the extractors' braces: nothing carrying a NUL reaches the
+        # database, whichever extractor produced it.
+        text, _ = strip_control_characters(text)
+        chunks = [
+            replace(chunk, text=strip_control_characters(chunk.text)[0]) for chunk in chunks
+        ]
+
         # Everything retrieved is untrusted, including pages the canton
         # publishes. A page carrying instruction-shaped text is indexed but
         # flagged, because canton pages do legitimately contain instructions.
@@ -529,7 +560,7 @@ class Crawler:
             while frontier and crawled < self._settings.crawler_max_pages_per_run:
                 url = frontier.popleft()
                 crawled += 1
-                for link in await self.crawl_url(url, source, outcome):
+                for link in await self._crawl_one(url, source, outcome):
                     if link not in queued:
                         queued.add(link)
                         frontier.append(link)
@@ -551,6 +582,13 @@ class Crawler:
             # database rather than propagate and leave the row saying RUNNING
             # forever. The traceback goes to the log, not to the record.
             logger.exception("crawl.run_failed", source_id=str(source.id))
+            # A failed flush leaves the session refusing every statement
+            # until it is rolled back; recording the failure below would
+            # otherwise raise a second error on top of the first.
+            if not self._session.is_active:
+                self._session.rollback()
+                if run not in self._session:
+                    self._session.add(run)
             run.state = CrawlRunState.FAILED.value
             outcome.errors.append(f"run_failed: {type(exc).__name__}")
 

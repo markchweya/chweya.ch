@@ -282,6 +282,45 @@ class TestPersistence:
         assert site.requested == []
 
 
+class TestOneBadPage:
+    async def test_a_page_the_database_refuses_costs_one_page_not_the_run(self, db, crawl_env, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """A 20 MB PDF whose text carried NUL bytes made the insert fail and
+        took a four-thousand-page run down with it. Each page now persists
+        inside a savepoint: that page is counted as failed with its reason,
+        the others are stored, and the run completes."""
+        source, site, crawler, fetcher = crawl_env()
+        original = Crawler._persist
+        calls = {"n": 0}
+
+        def flaky(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise RuntimeError("PostgreSQL text fields cannot contain NUL (0x00) bytes")
+            return original(self, *args, **kwargs)
+
+        monkeypatch.setattr(Crawler, "_persist", flaky)
+        run = await crawler.run(source)
+        db.commit()
+        await fetcher.aclose()
+
+        assert run.state == "completed"
+        assert run.urls_failed == 1
+        assert run.documents_created == 1
+        assert "RuntimeError" in run.error_summary
+        assert db.execute(sql("SELECT count(*) FROM documents")).scalar_one() == 1
+
+    async def test_nul_bytes_in_a_page_are_removed_before_storage(self, db, crawl_env) -> None:  # type: ignore[no-untyped-def]
+        page = PAGE.replace(b"Einwohnerkontrolle", b"Einwoh\x00nerkontrolle")
+        source, site, crawler, fetcher = crawl_env(page=page)
+        run = await crawler.run(source)
+        db.commit()
+        await fetcher.aclose()
+        assert run.state == "completed"
+        stored = db.execute(sql("SELECT extracted_text FROM document_versions")).scalars().all()
+        assert stored
+        assert all("\x00" not in text for text in stored)
+
+
 class TestInjectionHandling:
     async def test_a_page_with_injected_instructions_is_held_for_review(self, db, crawl_env) -> None:  # type: ignore[no-untyped-def]
         """Indexed but not approved, because canton pages do contain instructions."""

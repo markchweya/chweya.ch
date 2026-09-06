@@ -45,6 +45,7 @@ from app.db.models import (
     User,
 )
 from app.ingest.chunking import chunk_page, chunk_pdf
+from app.ingest.textclean import strip_control_characters
 from app.ingest.extract_document import (
     ExtractedDocument,
     extract_csv,
@@ -441,7 +442,7 @@ def _version_for(
         # has a public URL anyone can check, the upload has only the word of
         # whoever sent it.
         status=ContentStatus.AWAITING_REVIEW.value,
-        extracted_text=extraction.text,
+        extracted_text=strip_control_characters(extraction.text)[0],
         extraction_quality=extraction.quality.value,
         extraction_notes="; ".join(notes),
         storage_path=storage_path,
