@@ -501,6 +501,26 @@ class TestAnswering:
         assert payload["citations"][0]["url"].startswith("https://www.zug.ch/")
         assert client.stub.calls == 2, "the model gets one corrective retry first"
 
+    def test_a_retry_that_gives_up_does_not_claim_nothing_was_found(self, client) -> None:  # type: ignore[no-untyped-def]
+        """Watched live: a real answer streamed, then the screen said no
+        verified information exists. The correction turn offers NO_ANSWER as
+        a way out and the model took it, but that says nothing about the
+        evidence: the first attempt answered from it. The honest message is
+        that pages were found and the answer could not be tied to them, with
+        the pages listed."""
+        client.stub.text = "Die Anmeldung kostet zwanzig Franken."
+        client.stub.retry_text = "NO_ANSWER"
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert client.stub.calls == 2
+        assert payload["is_refusal"]
+        # The "nothing found" message must not appear when pages were found.
+        assert "keine gesicherten Angaben" not in payload["text"]
+        assert payload["citations"], "the retrieved pages are still offered"
+
     def test_an_uncited_answer_is_retried_and_the_cited_retry_is_shown(self, client) -> None:  # type: ignore[no-untyped-def]
         """One corrective turn recovers most answers a small model fails to
         cite, so a resident sees the answer instead of the fallback."""

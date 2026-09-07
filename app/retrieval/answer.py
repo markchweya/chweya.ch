@@ -756,7 +756,16 @@ async def answer_question(
         logger.info("answer.citation_retry")
         try:
             second = await llm.generate(correction_request(prepared, text))
-            text, was_truncated = second.text, second.was_truncated
+            if is_no_answer(strip_markup(second.text)):
+                # The correction turn offers NO_ANSWER as a way out, and a
+                # small model takes it rather than cite. That is not a
+                # finding about the evidence: the first attempt answered
+                # from it. Keeping the first attempt sends this to the
+                # uncited fallback, which says pages were found and lists
+                # them, instead of claiming nothing was found at all.
+                logger.info("answer.retry_gave_up")
+            else:
+                text, was_truncated = second.text, second.was_truncated
         except LLMError:
             # The first response exists; finalise it and let the uncited
             # fallback handle it rather than reporting the model unavailable.
@@ -862,7 +871,13 @@ async def stream_answer(
         logger.info("answer.citation_retry")
         try:
             second = await llm.generate(correction_request(prepared, text))
-            text = second.text
+            # As above: a retry that gives up says nothing about the
+            # evidence, so the first attempt stands and the uncited
+            # fallback reports it honestly.
+            if is_no_answer(strip_markup(second.text)):
+                logger.info("answer.retry_gave_up")
+            else:
+                text = second.text
         except LLMError:
             pass
     elif needs_table_retry(text, prepared):
