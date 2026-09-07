@@ -31,6 +31,11 @@ from app.observability import configure_logging, get_logger
 
 logger = get_logger(__name__)
 
+# Below this the evidence is squeezed to two or three passages. Not enforced:
+# a smaller window still works, and refusing to start over a quality setting
+# would be worse than saying so. See docs/apertus.md.
+RECOMMENDED_CONTEXT_TOKENS = 4096
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -47,6 +52,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         crawler_hosts=len(settings.allowed_hosts),
         transcripts_stored=settings.store_chat_transcripts,
     )
+
+    # The system prompt and the answer reserve take a fixed share of the
+    # window; what remains is what the evidence gets. Below this, only two or
+    # three passages fit and answers come from the wrong page rather than no
+    # page, which is the harder failure to notice.
+    if settings.apertus_max_context_tokens < RECOMMENDED_CONTEXT_TOKENS:
+        logger.warning(
+            "apertus.context_window_tight",
+            configured=settings.apertus_max_context_tokens,
+            recommended=RECOMMENDED_CONTEXT_TOKENS,
+            hint=(
+                "Little room is left for evidence. Raise "
+                "APERTUS_MAX_CONTEXT_TOKENS, up to what the served model "
+                "was started with; see docs/apertus.md."
+            ),
+        )
 
     if settings.environment is not Environment.PRODUCTION:
         logger.warning(

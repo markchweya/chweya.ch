@@ -16,11 +16,30 @@ step, described below.
 | `APERTUS_MODEL` | `apertus` | Must match what the server lists |
 | `APERTUS_API_KEY` | empty | Only if the server requires one |
 | `APERTUS_TIMEOUT_SECONDS` | 120 | A person is waiting |
-| `APERTUS_MAX_CONTEXT_TOKENS` | 8192 | Must not exceed the model's window |
+| `APERTUS_MAX_CONTEXT_TOKENS` | 8192 | Must not exceed the model's window; 4096 is the practical floor, see below |
 | `APERTUS_MAX_OUTPUT_TOKENS` | 1024 | Reserved from the context budget |
 | `APERTUS_TEMPERATURE` | 0.2 | Low on purpose, see below |
 | `APERTUS_MAX_RETRIES` | 2 | Transient failures only |
 | `APERTUS_STREAM` | true | Supported by the provider |
+
+### How small the context window may be
+
+The system prompt is about 1000 tokens, and the reserve for the answer is
+the output limit plus a small margin. Whatever remains is what the evidence
+gets, so a tight window is a retrieval limit as much as a model limit: at
+3072 context and 512 output only two or three passages fit, and a question
+whose answer sits in the fourth is refused or answered from the wrong page.
+
+4096 is the floor worth running for the 8B model on a laptop, and 8192 is
+better where the machine allows it. On CPU the cost of the larger window is
+mostly memory rather than time, because the prompt is processed once per
+question. The window configured here must not exceed what the serving model
+was started with; Ollama silently truncates a longer prompt otherwise, which
+looks like the model ignoring its evidence.
+
+The provider refuses a request whose prompt plus output exceeds the window
+rather than letting the server truncate it, so a window set too small shows
+up as a clear failure rather than as quietly worse answers.
 
 ### Why temperature is 0.2
 
