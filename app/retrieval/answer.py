@@ -301,6 +301,22 @@ def declares_no_answer(text: str, available: int) -> bool:
     return not (kept and len(remainder) >= SUBSTANTIVE_ANSWER_CHARACTERS)
 
 
+def wrote_without_citing(text: str, available: int) -> bool:
+    """Whether the sentinel arrived after prose long enough to be an answer.
+
+    The other half of the same failure. The model reads the passages, writes
+    a full answer from them, cites none of it, and signs off with the
+    sentinel. Nothing was missing from the evidence, so saying "I could not
+    find verified information" is false: what failed is the citation. This
+    routes such a response to the uncited fallback, which says pages were
+    found and lists them.
+    """
+    if not is_no_answer(text):
+        return False
+    remainder, kept, _ = validate_citations(without_sentinel(text), available)
+    return not kept and len(remainder) >= SUBSTANTIVE_ANSWER_CHARACTERS
+
+
 # Sent back to the model, once, when it answered without citing. A small
 # quantised model ignores the citation instruction often enough that giving
 # up on the first miss throws away real answers; one corrective turn recovers
@@ -314,11 +330,17 @@ _CITATION_CORRECTION = (
 
 
 def needs_citation_retry(text: str, prepared: PreparedAnswer) -> bool:
-    """Whether a response should be regenerated with the correction turn."""
+    """Whether a response should be regenerated with the correction turn.
+
+    A response that ends in the sentinel after an uncited answer is exactly
+    what the correction turn is for, so it gets its one attempt like any
+    other uncited answer. Only a genuine refusal skips the retry.
+    """
     cleaned = strip_markup(text)
-    if is_no_answer(cleaned):
+    available = len(prepared.prompt.cited_chunks)
+    if is_no_answer(cleaned) and not wrote_without_citing(cleaned, available):
         return False
-    _, kept, _ = validate_citations(cleaned, len(prepared.prompt.cited_chunks))
+    _, kept, _ = validate_citations(cleaned, available)
     return not kept
 
 
@@ -693,16 +715,23 @@ def finalise_answer(text: str, was_truncated: bool, prepared: PreparedAnswer) ->
 
     all_citations = _build_citations(prompt, answer_language)
 
-    if is_no_answer(cleaned) and not declares_no_answer(cleaned, len(prompt.cited_chunks)):
+    available = len(prompt.cited_chunks)
+
+    if is_no_answer(cleaned) and not declares_no_answer(cleaned, available):
         # A cited answer that also echoed the sentinel. The word is the
         # model repeating its instruction, not a finding about the
         # evidence, so it is removed and the answer stands.
         logger.info("answer.sentinel_after_an_answer")
-        cleaned, kept, _ = validate_citations(
-            without_sentinel(cleaned), len(prompt.cited_chunks)
-        )
+        cleaned, kept, _ = validate_citations(without_sentinel(cleaned), available)
+    elif wrote_without_citing(cleaned, available):
+        # The same echo, on an answer that cited nothing. The sentinel goes
+        # and the response falls through to the uncited fallback below, which
+        # is the honest report: pages were found, the answer could not be
+        # tied to them. Claiming nothing was found would be false.
+        logger.info("answer.uncited_answer_before_sentinel")
+        cleaned, kept, _ = validate_citations(without_sentinel(cleaned), available)
 
-    if declares_no_answer(cleaned, len(prompt.cited_chunks)):
+    if declares_no_answer(cleaned, available):
         # The model followed the instruction for passages that do not answer
         # the question. The person sees the fixed refusal, in their language,
         # with the retrieved pages attached so the nearest official material

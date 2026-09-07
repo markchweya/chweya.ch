@@ -564,6 +564,63 @@ class TestAnswering:
         assert "keine gesicherten Angaben" not in payload["text"]
         assert payload["citations"], "the retrieved pages are still offered"
 
+    def test_an_uncited_answer_ending_in_the_sentinel_still_gets_its_retry(self, client) -> None:  # type: ignore[no-untyped-def]
+        """Reported three times: an answer streams, then the screen says no
+        verified information exists. The model wrote a full answer from the
+        passages, cited none of it, and signed off with the sentinel. That is
+        an uncited answer, so the correction turn applies to it like any
+        other, and the retry recovers it."""
+        client.stub.text = (
+            "Die Anmeldung erfolgt bei der Einwohnerkontrolle Ihrer Gemeinde. "
+            "Bringen Sie Ihre Identitaetskarte und den Mietvertrag mit. "
+            "Die Anmeldung kostet zwanzig Franken pro Person.\n\nNO_ANSWER"
+        )
+        client.stub.retry_text = "Die Anmeldung kostet CHF 20.-- pro Person [1]."
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert client.stub.calls == 2, "the sentinel must not skip the retry"
+        assert not payload["is_refusal"]
+        assert "CHF 20.--" in payload["text"]
+
+    def test_an_uncited_answer_ending_in_the_sentinel_is_not_nothing_found(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The same response when the retry does not recover it. Pages were
+        retrieved and the model answered from them, so the failure is the
+        missing citation. The message says that and lists the pages; claiming
+        nothing was found would be false."""
+        client.stub.text = (
+            "Die Anmeldung erfolgt bei der Einwohnerkontrolle Ihrer Gemeinde. "
+            "Bringen Sie Ihre Identitaetskarte und den Mietvertrag mit. "
+            "Die Anmeldung kostet zwanzig Franken pro Person.\n\nNO_ANSWER"
+        )
+        client.stub.retry_text = "NO_ANSWER"
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert payload["is_refusal"]
+        assert "NO_ANSWER" not in payload["text"]
+        assert "keine gesicherten Angaben" not in payload["text"]
+        assert "zwanzig Franken" not in payload["text"], "uncited text stays withheld"
+        assert payload["citations"], "the retrieved pages are offered as links"
+
+    def test_a_short_uncited_refusal_with_the_sentinel_stays_a_refusal(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The guard is the length of what surrounds the sentinel. A sentence
+        of refusal prose around it is not an answer and must still produce the
+        nothing-found message."""
+        client.stub.text = "Die Passagen beantworten die Frage nicht. NO_ANSWER"
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert payload["is_refusal"]
+        assert "keine gesicherten Angaben" in payload["text"]
+        assert client.stub.calls == 1, "a refusal spends no retry"
+
     def test_an_uncited_answer_is_retried_and_the_cited_retry_is_shown(self, client) -> None:  # type: ignore[no-untyped-def]
         """One corrective turn recovers most answers a small model fails to
         cite, so a resident sees the answer instead of the fallback."""
@@ -1107,6 +1164,25 @@ class TestStreaming:
         assert payload["is_refusal"]
         assert "keine gesicherten Angaben" not in payload["text"]
         assert payload["citations"], "the final event offers the retrieved pages"
+
+    def test_a_streamed_uncited_answer_ending_in_the_sentinel_is_recovered(self, client) -> None:  # type: ignore[no-untyped-def]
+        """The reported failure, on the path the person actually watches: the
+        answer streams, the model appends the sentinel, and the final event
+        used to replace the whole thing with the nothing-found message. The
+        correction turn now runs and the cited answer arrives instead."""
+        client.stub.text = (
+            "Die Anmeldung erfolgt bei der Einwohnerkontrolle Ihrer Gemeinde. "
+            "Bringen Sie Ihre Identitaetskarte und den Mietvertrag mit. "
+            "Die Anmeldung kostet zwanzig Franken pro Person.\n\nNO_ANSWER"
+        )
+        client.stub.retry_text = "Die Anmeldung kostet CHF 20.-- pro Person [1]."
+        events = read_sse(client, "Was kostet die Anmeldung?")
+
+        assert client.stub.calls == 2
+        payload = events[-1]["payload"]
+        assert not payload["is_refusal"]
+        assert "CHF 20.--" in payload["text"]
+        assert "NO_ANSWER" not in payload["text"]
 
     def test_the_final_event_carries_the_markdown_stripped_text(self, client) -> None:  # type: ignore[no-untyped-def]
         client.stub.text = "**Die Anmeldung** kostet CHF 20 [1]."
