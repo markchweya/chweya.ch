@@ -258,14 +258,47 @@ NO_ANSWER_SENTINEL = "NO_ANSWER"
 
 
 def is_no_answer(text: str) -> bool:
-    """Whether a generated response declares the evidence insufficient.
+    """Whether a generated response mentions the sentinel at all.
 
     The instruction says to reply with the sentinel alone; a small model
-    wraps it in prose anyway ("Therefore, the answer is NO_ANSWER."). Any
-    occurrence counts. A response carrying the sentinel is a declaration of
-    insufficiency and must never reach the screen as an answer.
+    wraps it in prose anyway ("Therefore, the answer is NO_ANSWER."), so any
+    occurrence counts here. Whether it means the model could not answer is a
+    separate question: see :func:`declares_no_answer`.
     """
     return NO_ANSWER_SENTINEL in text.upper()
+
+
+# The sentence carrying the sentinel, so the rest of a response can be read
+# without it.
+_SENTINEL_SENTENCE = re.compile(
+    rf"[^.!?\n]*\b{NO_ANSWER_SENTINEL}\b[^.!?\n]*[.!?]?", re.IGNORECASE
+)
+
+# How much cited text has to remain, once the sentinel sentence is removed,
+# before the response counts as an answer rather than a refusal. A model
+# that meant to refuse writes the sentinel and little else; one that
+# answered and then echoed the instruction leaves a whole answer behind.
+SUBSTANTIVE_ANSWER_CHARACTERS = 160
+
+
+def without_sentinel(text: str) -> str:
+    """The response with the sentinel and its sentence removed."""
+    return tidy_layout(_SENTINEL_SENTENCE.sub("", text))
+
+
+def declares_no_answer(text: str, available: int) -> bool:
+    """Whether the response is a refusal rather than an answer.
+
+    Observed in use: the model wrote a full answer with three citations and
+    then appended the sentinel, echoing the instruction it had been given.
+    Treating that as a refusal threw away a good answer and told the person
+    nothing was found, which was false. The sentinel decides only when what
+    surrounds it is not itself a cited answer.
+    """
+    if not is_no_answer(text):
+        return False
+    remainder, kept, _ = validate_citations(without_sentinel(text), available)
+    return not (kept and len(remainder) >= SUBSTANTIVE_ANSWER_CHARACTERS)
 
 
 # Sent back to the model, once, when it answered without citing. A small
@@ -660,7 +693,16 @@ def finalise_answer(text: str, was_truncated: bool, prepared: PreparedAnswer) ->
 
     all_citations = _build_citations(prompt, answer_language)
 
-    if is_no_answer(cleaned):
+    if is_no_answer(cleaned) and not declares_no_answer(cleaned, len(prompt.cited_chunks)):
+        # A cited answer that also echoed the sentinel. The word is the
+        # model repeating its instruction, not a finding about the
+        # evidence, so it is removed and the answer stands.
+        logger.info("answer.sentinel_after_an_answer")
+        cleaned, kept, _ = validate_citations(
+            without_sentinel(cleaned), len(prompt.cited_chunks)
+        )
+
+    if declares_no_answer(cleaned, len(prompt.cited_chunks)):
         # The model followed the instruction for passages that do not answer
         # the question. The person sees the fixed refusal, in their language,
         # with the retrieved pages attached so the nearest official material
@@ -756,7 +798,9 @@ async def answer_question(
         logger.info("answer.citation_retry")
         try:
             second = await llm.generate(correction_request(prepared, text))
-            if is_no_answer(strip_markup(second.text)):
+            if declares_no_answer(
+                strip_markup(second.text), len(prepared.prompt.cited_chunks)
+            ):
                 # The correction turn offers NO_ANSWER as a way out, and a
                 # small model takes it rather than cite. That is not a
                 # finding about the evidence: the first attempt answered
@@ -874,7 +918,9 @@ async def stream_answer(
             # As above: a retry that gives up says nothing about the
             # evidence, so the first attempt stands and the uncited
             # fallback reports it honestly.
-            if is_no_answer(strip_markup(second.text)):
+            if declares_no_answer(
+                strip_markup(second.text), len(prepared.prompt.cited_chunks)
+            ):
                 logger.info("answer.retry_gave_up")
             else:
                 text = second.text

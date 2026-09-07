@@ -501,6 +501,49 @@ class TestAnswering:
         assert payload["citations"][0]["url"].startswith("https://www.zug.ch/")
         assert client.stub.calls == 2, "the model gets one corrective retry first"
 
+    def test_a_cited_answer_that_echoes_the_sentinel_is_still_an_answer(self, client) -> None:  # type: ignore[no-untyped-def]
+        """Watched live: a full answer with three citations streamed, then the
+        screen said no verified information exists. The model had appended
+        the sentinel after finishing, echoing its instruction. The word is
+        removed and the answer stands; only a response that is not itself a
+        cited answer counts as a refusal."""
+        client.stub.text = (
+            "Die Anmeldung erfolgt bei der Einwohnerkontrolle Ihrer Gemeinde [1]. "
+            "Bringen Sie Ihre Identitaetskarte mit [1]. "
+            "Die Anmeldung kostet CHF 20.-- pro Person und ist vor Ort zu "
+            "entrichten [1].\n\nNO_ANSWER"
+        )
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert not payload["is_refusal"]
+        assert "CHF 20" in payload["text"]
+        assert "NO_ANSWER" not in payload["text"]
+        assert payload["citations"]
+
+    def test_the_bare_sentinel_is_still_a_refusal(self, client) -> None:  # type: ignore[no-untyped-def]
+        client.stub.text = "NO_ANSWER"
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert payload["is_refusal"]
+        assert "keine gesicherten Angaben" in payload["text"]
+
+    def test_the_sentinel_wrapped_in_prose_is_still_a_refusal(self, client) -> None:  # type: ignore[no-untyped-def]
+        """No cited answer surrounds it, so the word means what it says."""
+        client.stub.text = "Therefore, the answer is NO_ANSWER."
+        payload = client.post(
+            "/ask",
+            json={"question": "Was kostet die Anmeldung?", "lang": "de"},
+            headers={"Accept": "application/json"},
+        ).json()
+        assert payload["is_refusal"]
+        assert "keine gesicherten Angaben" in payload["text"]
+
     def test_a_retry_that_gives_up_does_not_claim_nothing_was_found(self, client) -> None:  # type: ignore[no-untyped-def]
         """Watched live: a real answer streamed, then the screen said no
         verified information exists. The correction turn offers NO_ANSWER as
