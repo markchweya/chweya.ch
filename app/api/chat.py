@@ -54,14 +54,32 @@ templates.env.filters["answer_blocks"] = answer_blocks
 # own spacing, and "days [1]." would otherwise render as "days ¹ .".
 _CITE = re.compile(r" ?\[(\d{1,2})\]")
 
+# An office's telephone number, email address and page are the parts of an
+# answer a person acts on, so they become links: tap to call, tap to write.
+# Matched on the escaped text, so nothing here can introduce markup the
+# model chose. A trailing full stop belongs to the sentence, not the link.
+_URL = re.compile(r"https?://[^\s<>\"]+[^\s<>\".,;:!?)\]]")
+_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+_PHONE = re.compile(r"\+41[\s./]?(?:\d[\s./]?){8,12}\d")
+
 
 def cite_marks(text: str) -> Markup:
-    """Render bracketed citation numbers as small chips.
+    """Shape one line of answer text for display.
 
-    The text is escaped first; only the markers this function writes are
-    markup. Nothing the model wrote is rendered as HTML.
+    The text is escaped first; every tag written after that is written here.
+    Nothing the model produced is rendered as markup.
     """
     escaped = str(escape(text))
+    escaped = _URL.sub(
+        lambda m: f'<a href="{m.group(0)}" rel="noopener noreferrer nofollow" '
+        f'target="_blank">{m.group(0)}</a>',
+        escaped,
+    )
+    escaped = _EMAIL.sub(lambda m: f'<a href="mailto:{m.group(0)}">{m.group(0)}</a>', escaped)
+    escaped = _PHONE.sub(
+        lambda m: f'<a href="tel:{re.sub(r"[^+0-9]", "", m.group(0))}">{m.group(0)}</a>',
+        escaped,
+    )
     return Markup(_CITE.sub(r'<sup class="cite">\1</sup>', escaped))
 
 

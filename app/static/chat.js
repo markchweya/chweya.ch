@@ -244,22 +244,49 @@
   // A list item shaped "Label: value", mirroring the server's rule.
   var LABELED_ITEM = /^([^:]{2,40}):\s+(.+)$/;
 
-  // Bracketed citation numbers become small chips, as the server renders
-  // them. Everything else is a text node; nothing the model wrote becomes
-  // markup.
-  var CITE = / ?\[(\d{1,2})\]/g;
+  // One pass over a line of answer text: telephone numbers, email addresses
+  // and links become real links, bracketed numbers become citation chips,
+  // and everything else stays a text node. Mirrors the server filter; no
+  // string the model wrote is ever assigned as HTML.
+  var TOKEN = new RegExp(
+    "(https?://[^\\s<>\"]+[^\\s<>\".,;:!?)\\]])" +
+    "|([\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+)" +
+    "|(\\+41[\\s./]?(?:\\d[\\s./]?){8,12}\\d)" +
+    "| ?\\[(\\d{1,2})\\]",
+    "g"
+  );
+
+  function makeLink(href, label, external) {
+    var anchor = document.createElement("a");
+    anchor.href = href;
+    if (external) {
+      anchor.rel = "noopener noreferrer nofollow";
+      anchor.target = "_blank";
+    }
+    anchor.textContent = label;
+    return anchor;
+  }
+
   function writeWithCites(element, text) {
     var last = 0;
     var match;
-    CITE.lastIndex = 0;
-    while ((match = CITE.exec(text)) !== null) {
+    TOKEN.lastIndex = 0;
+    while ((match = TOKEN.exec(text)) !== null) {
       if (match.index > last) {
         element.appendChild(document.createTextNode(text.slice(last, match.index)));
       }
-      var chip = document.createElement("sup");
-      chip.className = "cite";
-      chip.textContent = match[1];
-      element.appendChild(chip);
+      if (match[1]) {
+        element.appendChild(makeLink(match[1], match[1], true));
+      } else if (match[2]) {
+        element.appendChild(makeLink("mailto:" + match[2], match[2], false));
+      } else if (match[3]) {
+        element.appendChild(makeLink("tel:" + match[3].replace(/[^+0-9]/g, ""), match[3], false));
+      } else {
+        var chip = document.createElement("sup");
+        chip.className = "cite";
+        chip.textContent = match[4];
+        element.appendChild(chip);
+      }
       last = match.index + match[0].length;
     }
     if (last < text.length) {
@@ -267,10 +294,6 @@
     }
   }
 
-  // The final answer is rendered as blocks, mirroring the server template:
-  // blank lines separate paragraphs, "- " lines become a list, numbered
-  // lines become steps, and " | " rows become a table. This is what makes a
-  // long answer readable on a phone instead of a wall of text.
   function renderAnswerText(target, text) {
     target.textContent = "";
     target.classList.add("msg__text--blocks");
@@ -332,6 +355,7 @@
         var first = parseInt(stripped, 10);
         if (first > 1) {
           steps.setAttribute("start", String(first));
+          steps.style.counterReset = "step " + (first - 1);
         }
         while (i < lines.length && STEP_LINE.test(lines[i].trim())) {
           var step = document.createElement("li");

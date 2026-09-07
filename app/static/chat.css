@@ -321,6 +321,13 @@ details[open] > [data-tip]::after { display: none; }
  * raw string, keeps the pre-wrap above until the final render replaces it. */
 .msg__text--blocks { white-space: normal; }
 .msg__text--blocks p { margin: 0 0 0.8em; }
+/* The opening line says what the answer is about; the steps under it carry
+ * the detail. A little more presence there gives the answer a top. */
+.msg__text--blocks > p:first-child {
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  margin-bottom: 0.9em;
+}
 .msg__text--blocks ul,
 .msg__text--blocks ol {
   margin: 0 0 0.8em;
@@ -328,6 +335,68 @@ details[open] > [data-tip]::after { display: none; }
 }
 .msg__text--blocks li { margin-block: 0.35em; }
 .msg__text--blocks li::marker { color: var(--dumi-ink-soft); }
+
+/* Steps are the shape of an answer that tells someone what to do, so the
+ * number is a mark of its own rather than a character in the margin. The
+ * counter is used instead of the list's own marker so a list starting at
+ * three still reads three. */
+.msg__text--blocks ol {
+  counter-reset: step;
+  list-style: none;
+  padding-inline-start: 0;
+}
+.msg__text--blocks ol > li {
+  counter-increment: step;
+  position: relative;
+  margin-block: 0.6em;
+  padding-inline-start: 2.4rem;
+}
+.msg__text--blocks ol > li::before {
+  content: counter(step);
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.05em;
+  display: grid;
+  place-items: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 50%;
+  background: rgb(var(--dumi-flow-rgb) / 0.18);
+  color: var(--dumi-ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bullets keep a smaller mark in the flow colour, so a list of documents to
+ * bring reads as a list rather than as indented prose. */
+.msg__text--blocks ul {
+  list-style: none;
+  padding-inline-start: 1.1rem;
+}
+.msg__text--blocks ul > li {
+  position: relative;
+  padding-inline-start: 0.9rem;
+}
+.msg__text--blocks ul > li::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.62em;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: rgb(var(--dumi-flow-rgb) / 0.55);
+}
+
+/* A telephone number, an address and a link are what a person acts on. */
+.msg__text--blocks a {
+  color: var(--dumi-flow);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+.msg__text--blocks a:hover { color: var(--dumi-ink); }
 .msg__text--blocks > :last-child { margin-bottom: 0; }
 
 /* A citation number in the text: a small chip that matches its entry in the
@@ -378,10 +447,16 @@ html:has(#transcript)::-webkit-scrollbar { display: none; }
   border-radius: var(--radius);
   font-size: 0.9375rem;
 }
+/* A caution is a note beside the answer, not a slab in front of it. It
+ * carries a rule and quieter type; the answer is what the person came for.
+ * Emergency information keeps its weight, below. */
 .callout--caution {
-  background: var(--dumi-surface);
-  border: 1px solid var(--dumi-line);
+  padding: 0 0 0 0.85rem;
+  border-left: 2px solid var(--dumi-line);
+  border-radius: 0;
   color: var(--dumi-ink-soft);
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 /* Emergency information is bordered heavily and placed first. It must not
  * rely on colour: the border weight and the leading position carry it. */

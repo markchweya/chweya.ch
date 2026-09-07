@@ -32,7 +32,7 @@
               {% for entry in block.entries %}<li>{{ entry | cite_marks }}</li>{% endfor %}
             </ul>
           {% elif block.kind == 'steps' %}
-            <ol{% if block.start > 1 %} start="{{ block.start }}"{% endif %}>
+            <ol{% if block.start > 1 %} start="{{ block.start }}" style="counter-reset: step {{ block.start - 1 }}"{% endif %}>
               {% for entry in block.entries %}<li>{{ entry | cite_marks }}</li>{% endfor %}
             </ol>
           {% elif block.kind == 'pairs' %}
