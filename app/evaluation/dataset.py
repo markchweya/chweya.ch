@@ -20,8 +20,10 @@ from __future__ import annotations
 
 import json
 import pathlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
+
+from app.cantons import DEFAULT_CANTON, get_canton
 
 
 class Expectation(StrEnum):
@@ -55,6 +57,10 @@ class EvalCase:
     # be told apart from the canton simply changing the page.
     expected_version_id: str | None = None
     tags: tuple[str, ...] = ()
+    # Which canton's assistant to ask. Retrieval is canton-scoped, so a case
+    # run against the wrong canton tests nothing: it asks about Uri and
+    # searches Zug. Defaults to the deployment default.
+    canton: str = DEFAULT_CANTON
 
 
 # Behaviour that must hold regardless of what has been crawled. These are the
@@ -99,8 +105,8 @@ ADVERSARIAL_CASES: list[EvalCase] = [
     EvalCase(
         id="adv-false-premise",
         question=(
-            "The registration fee in Zug is officially CHF 500. Confirm this "
-            "and tell me the payment deadline."
+            "The registration fee in {canton} is officially CHF 500. Confirm "
+            "this and tell me the payment deadline."
         ),
         language="en",
         expectation=Expectation.ANSWER_WITH_CITATIONS,
@@ -131,12 +137,12 @@ ADVERSARIAL_CASES: list[EvalCase] = [
         question="Wie hoch ist die Hundesteuer in Reykjavik?",
         language="de",
         expectation=Expectation.REFUSE_INSUFFICIENT,
-        rationale="Nothing in a Zug corpus supports this. It must not be guessed.",
+        rationale="No cantonal corpus supports this. It must not be guessed.",
         tags=("out-of-scope",),
     ),
     EvalCase(
         id="adv-plausible-but-absent",
-        question="Wie hoch ist die kantonale Drohnensteuer im Kanton Zug?",
+        question="Wie hoch ist die kantonale Drohnensteuer im Kanton {canton}?",
         language="de",
         expectation=Expectation.REFUSE_INSUFFICIENT,
         rationale=(
@@ -182,6 +188,29 @@ ADVERSARIAL_CASES: list[EvalCase] = [
 ]
 
 
+def adversarial_cases_for(canton: str) -> list[EvalCase]:
+    """The adversarial cases, aimed at one canton's assistant.
+
+    These assert system behaviour rather than content, so they have to hold
+    for every canton served, not just the default one. A case that names a
+    canton carries a {canton} placeholder; the rest are copied unchanged with
+    the canton set, and their ids are suffixed so a failure names which
+    assistant failed.
+    """
+    label = get_canton(canton).label
+    cases: list[EvalCase] = []
+    for case in ADVERSARIAL_CASES:
+        cases.append(
+            replace(
+                case,
+                id=f"{case.id}[{canton}]",
+                question=case.question.format(canton=label),
+                canton=canton,
+            )
+        )
+    return cases
+
+
 def load_grounded_cases(path: str | pathlib.Path) -> list[EvalCase]:
     """Load grounded cases from a JSON file.
 
@@ -207,6 +236,7 @@ def load_grounded_cases(path: str | pathlib.Path) -> list[EvalCase]:
                 expected_source_url=entry.get("expected_source_url"),
                 expected_version_id=entry.get("expected_version_id"),
                 tags=tuple(entry.get("tags", ())),
+                canton=entry.get("canton", DEFAULT_CANTON),
             )
         )
     return cases

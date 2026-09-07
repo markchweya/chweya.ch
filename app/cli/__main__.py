@@ -9,6 +9,7 @@ COMMANDS = {
     "verify-audit": "Walk the audit log and confirm its hash chain is intact.",
     "check-config": "Validate configuration and report what production would refuse.",
     "evaluate": "Run the evaluation suite, including the adversarial cases.",
+    "corpus-health": "Report whether each canton's corpus is current, structured and maintained.",
 }
 
 
@@ -44,6 +45,11 @@ def main() -> int:
 
     if command == "evaluate":
         from app.cli.evaluate import main as run
+
+        return run(argv)
+
+    if command == "corpus-health":
+        from app.cli.corpus_health import main as run
 
         return run(argv)
 

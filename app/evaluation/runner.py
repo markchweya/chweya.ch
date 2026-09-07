@@ -9,6 +9,7 @@ appear.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
@@ -54,16 +55,75 @@ class SuiteResult:
     def total(self) -> int:
         return len(self.results)
 
+    def cantons(self) -> list[str]:
+        return sorted({result.case.canton for result in self.results})
+
     def summary(self) -> str:
         lines = [f"{self.passed}/{self.total} cases passed."]
         if self.grounded_case_count == 0:
-            # Stated plainly rather than reported as a pass.
+            # Stated plainly rather than reported as a pass. This is the exact
+            # position the Canton of Lucerne was in on the day it launched:
+            # the system's behaviour under attack was known, and whether it
+            # answered ordinary questions correctly was not.
             lines.append(
                 "No grounded cases are loaded. Adversarial behaviour is covered; "
-                "answer accuracy against real Zug content is not tested."
+                "whether real questions get correct answers from real cantonal "
+                "content is NOT tested. See evaluation/README.md."
             )
         for result in self.failed:
             lines.append(f"  FAIL {result.case.id}: {', '.join(result.failures)}")
+        return "\n".join(lines)
+
+
+@dataclass
+class CoverageProfile:
+    """What one canton's assistant does with a set of ordinary questions.
+
+    No expected answers, so nothing here says an answer was correct. What it
+    says is how often the assistant answers at all, and on how much evidence.
+    That is the number Lucerne did not have: an assistant that refuses four
+    questions in five is not safe, it is useless, and both failures are worth
+    knowing about before a canton sees it rather than after.
+    """
+
+    canton: str
+    questions: int = 0
+    answered: int = 0
+    refused: int = 0
+    by_confidence: dict[str, int] = field(default_factory=dict)
+    citations_total: int = 0
+    refusal_reasons: dict[str, int] = field(default_factory=dict)
+    slowest_seconds: float = 0.0
+
+    @property
+    def answer_rate(self) -> float:
+        return self.answered / self.questions if self.questions else 0.0
+
+    @property
+    def citations_per_answer(self) -> float:
+        return self.citations_total / self.answered if self.answered else 0.0
+
+    def summary(self) -> str:
+        lines = [
+            f"{self.canton}: answered {self.answered}/{self.questions} "
+            f"({self.answer_rate:.0%}), "
+            f"{self.citations_per_answer:.1f} sources per answer"
+        ]
+        if self.by_confidence:
+            spread = ", ".join(
+                f"{name} {count}" for name, count in sorted(self.by_confidence.items())
+            )
+            lines.append(f"  confidence   {spread}")
+        if self.refusal_reasons:
+            spread = ", ".join(
+                f"{name} {count}"
+                for name, count in sorted(
+                    self.refusal_reasons.items(), key=lambda item: -item[1]
+                )
+            )
+            lines.append(f"  refused for  {spread}")
+        if self.slowest_seconds:
+            lines.append(f"  slowest      {self.slowest_seconds:.1f}s")
         return "\n".join(lines)
 
 
@@ -121,7 +181,15 @@ async def run_suite(
 
     for case in cases:
         answer = await answer_question(
-            session, embedder, llm, case.question, language=case.language
+            session,
+            embedder,
+            llm,
+            case.question,
+            language=case.language,
+            # Retrieval is canton-scoped. Without this every case searched the
+            # default canton, so a case written about Uri was answered from
+            # Zug's pages and its result meant nothing.
+            canton=case.canton,
         )
         passed, failures = _check(case, answer)
         suite.results.append(
@@ -139,3 +207,52 @@ async def run_suite(
 
     logger.info("evaluation.completed", passed=suite.passed, total=suite.total)
     return suite
+
+
+async def measure_coverage(
+    session: Session,
+    embedder: EmbeddingProvider,
+    llm: LLMProvider,
+    questions: list[str],
+    *,
+    canton: str,
+    language: str = "de",
+) -> CoverageProfile:
+    """Ask ordinary questions and record what came back.
+
+    Deliberately without expected answers. Judging correctness needs a person
+    who knows the canton; judging whether the assistant is willing and able to
+    answer at all needs only this, and it is the cheaper measurement to take
+    first. Run it before showing anyone the product.
+    """
+    profile = CoverageProfile(canton=canton, questions=len(questions))
+    for question in questions:
+        started = time.monotonic()
+        answer = await answer_question(
+            session, embedder, llm, question, language=language, canton=canton
+        )
+        elapsed = time.monotonic() - started
+        profile.slowest_seconds = max(profile.slowest_seconds, elapsed)
+
+        if answer.is_refusal:
+            profile.refused += 1
+            # The reasons are the confidence policy's own words, so a bad
+            # answer rate can be traced to a cause: thin corpus, weak
+            # retrieval, or a model that will not cite.
+            for reason in answer.reasons or ("unspecified",):
+                profile.refusal_reasons[reason] = (
+                    profile.refusal_reasons.get(reason, 0) + 1
+                )
+        else:
+            profile.answered += 1
+            profile.citations_total += len(answer.citations)
+            name = answer.confidence.value
+            profile.by_confidence[name] = profile.by_confidence.get(name, 0) + 1
+
+    logger.info(
+        "evaluation.coverage_measured",
+        canton=canton,
+        questions=profile.questions,
+        answered=profile.answered,
+    )
+    return profile
