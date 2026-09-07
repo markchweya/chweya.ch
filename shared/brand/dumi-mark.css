@@ -181,13 +181,33 @@
   animation: dumi-pulse 2.4s ease-in-out infinite;
 }
 
-/* Thinking: everything accelerates and the core lights up. */
+/* Thinking: everything accelerates, the core lights up, and both the core
+   and the halo breathe.
+
+   The orbits alone do not survive being scaled down. Beside a message the
+   mark is 28px: the three lenses blur into each other, the static sheen and
+   the lit core dominate what is left, and the disc measures as still. It was
+   still on a recording of a ten-second wait, which left the product with no
+   working status indicator at the one moment it needs one. Breathing changes
+   the whole disc, so it reads at 28px and at 96px alike, and it is the mark's
+   own motion rather than a second indicator beside it. */
 .dumi[data-state="thinking"] { --dumi-tempo: .26; --dumi-halo: .5; }
-.dumi[data-state="thinking"] .dumi__core { opacity: 1; }
+.dumi[data-state="thinking"] .dumi__core {
+  opacity: 1;
+  animation: dumi-breathe 1.6s ease-in-out infinite;
+}
+.dumi[data-state="thinking"]::before {
+  animation: dumi-pulse 1.6s ease-in-out infinite;
+}
 
 @keyframes dumi-pulse {
   0%, 100% { transform: scale(1);    opacity: var(--dumi-halo); }
   50%      { transform: scale(1.12); opacity: calc(var(--dumi-halo) * .45); }
+}
+
+@keyframes dumi-breathe {
+  0%, 100% { opacity: .45; }
+  50%      { opacity: 1; }
 }
 
 /* --- On dark surfaces ----------------------------------------------------
@@ -205,6 +225,10 @@
 @media (prefers-reduced-motion: reduce) {
   .dumi__blob { animation: none; }
   .dumi[data-state="listening"]::before { animation: none; }
+  .dumi[data-state="thinking"]::before { animation: none; }
+  /* The declared opacity: 1 stands once the breathing stops, so thinking is
+     still the brightest of the three states. */
+  .dumi[data-state="thinking"] .dumi__core { animation: none; }
 }
 
 /* ==========================================================================

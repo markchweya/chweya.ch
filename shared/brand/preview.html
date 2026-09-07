@@ -200,11 +200,20 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
 .dumi[data-state="listening"] { --dumi-tempo: .8;  --dumi-halo: .85; }
 .dumi[data-state="thinking"]  { --dumi-tempo: .26; --dumi-halo: .5; }
 .dumi[data-state="listening"]::before { animation: dumi-pulse 2.4s ease-in-out infinite; }
-.dumi[data-state="thinking"] .dumi__core { opacity: 1; }
+.dumi[data-state="thinking"]::before { animation: dumi-pulse 1.6s ease-in-out infinite; }
+.dumi[data-state="thinking"] .dumi__core {
+  opacity: 1;
+  animation: dumi-breathe 1.6s ease-in-out infinite;
+}
 
 @keyframes dumi-pulse {
   0%, 100% { transform: scale(1);    opacity: var(--dumi-halo); }
   50%      { transform: scale(1.12); opacity: calc(var(--dumi-halo) * .45); }
+}
+
+@keyframes dumi-breathe {
+  0%, 100% { opacity: .45; }
+  50%      { opacity: 1; }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -215,6 +224,8 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   .dumi__blob { animation: none; }
   .dumi[data-state="listening"]::before { animation: none; }
+  .dumi[data-state="thinking"]::before { animation: none; }
+  .dumi[data-state="thinking"] .dumi__core { animation: none; }
 }
 
 /* --- favicon ----------------------------------------------------------- */
