@@ -18,7 +18,14 @@ from app.evaluation.dataset import (
     adversarial_cases_for,
     load_grounded_cases,
 )
-from app.evaluation.runner import CoverageProfile, measure_coverage
+from app.evaluation.runner import (
+    CaseResult,
+    CoverageProfile,
+    SuiteResult,
+    _check,
+    measure_coverage,
+    run_suite,
+)
 from app.retrieval.answer import Answer
 from app.retrieval.evidence import Confidence
 
@@ -148,3 +155,136 @@ class TestCoverageProfile:
         summary = profile.summary()
         assert "uri" in summary
         assert "40%" in summary
+
+
+class TestAnUnreachableModelIsNeverAPass:
+    """Observed on a real run: the model was configured for a 4096-token
+    window, the suite built prompts for 8192, and every case came back as
+    LLMRequestTooLarge. Most cases expect a refusal, and an unavailable model
+    produces one, so the suite reported 10 of 11 passing while testing
+    nothing at all. That is the worst failure a test suite can have."""
+
+    def _unreachable(self):  # type: ignore[no-untyped-def]
+        answer = _answer(refusal=True)
+        answer.degraded_reason = "model_unavailable_LLMRequestTooLarge"
+        return answer
+
+    def test_a_case_expecting_a_refusal_still_fails(self) -> None:
+        case = next(
+            c
+            for c in adversarial_cases_for("zug")
+            if c.expectation is Expectation.REFUSE_INSUFFICIENT
+        )
+        passed, failures = _check(case, self._unreachable())
+        assert not passed
+        assert "not reached" in failures[0]
+
+    def test_the_summary_leads_with_it(self) -> None:
+        case = adversarial_cases_for("zug")[0]
+        suite = SuiteResult(
+            results=[
+                CaseResult(
+                    case=case,
+                    passed=False,
+                    degraded_reason="model_unavailable_LLMRequestTooLarge",
+                )
+            ]
+        )
+        summary = suite.summary()
+        assert suite.unreachable == 1
+        assert "never reached the model" in summary
+        assert "APERTUS_MAX_CONTEXT_TOKENS" in summary
+
+    async def test_coverage_holds_it_apart_from_a_refusal(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """A configuration fault must not be reported as a corpus fault."""
+        recorder = _RecordingAnswers([self._unreachable()])
+        monkeypatch.setattr("app.evaluation.runner.answer_question", recorder)
+
+        profile = await measure_coverage(
+            None, None, None, ["a?", "b?"], canton="uri"
+        )
+        assert profile.unreachable == 2
+        assert profile.refused == 0
+        assert profile.measured == 0
+        assert "never reached" in profile.summary()
+
+    async def test_the_rate_counts_only_what_was_measured(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        answers = [_answer(refusal=False, citations=2), self._unreachable()]
+        recorder = _RecordingAnswers(answers)
+        monkeypatch.setattr("app.evaluation.runner.answer_question", recorder)
+
+        profile = await measure_coverage(
+            None, None, None, ["a?", "b?", "c?", "d?"], canton="uri"
+        )
+        assert profile.answered == 2
+        assert profile.unreachable == 2
+        assert profile.answer_rate == 1.0, "two of two that ran were answered"
+
+
+class TestTheContextWindowReachesThePipeline:
+    """The bug behind the unreachable model: the suite never passed the
+    configured limits, so it built prompts for a window the provider does not
+    serve."""
+
+    async def test_run_suite_passes_the_limits_through(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        seen: dict = {}
+
+        async def spy(session, embedder, llm, question, **kwargs):  # type: ignore[no-untyped-def]
+            seen.update(kwargs)
+            return _answer(refusal=True)
+
+        monkeypatch.setattr("app.evaluation.runner.answer_question", spy)
+        await run_suite(
+            None,
+            None,
+            None,
+            adversarial_cases_for("uri")[:1],
+            max_context_tokens=4096,
+            max_output_tokens=384,
+        )
+        assert seen["max_context_tokens"] == 4096
+        assert seen["max_output_tokens"] == 384
+
+    async def test_coverage_passes_the_limits_through(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        seen: dict = {}
+
+        async def spy(session, embedder, llm, question, **kwargs):  # type: ignore[no-untyped-def]
+            seen.update(kwargs)
+            return _answer(refusal=False, citations=1)
+
+        monkeypatch.setattr("app.evaluation.runner.answer_question", spy)
+        await measure_coverage(
+            None, None, None, ["a?"], canton="uri", max_context_tokens=4096
+        )
+        assert seen["max_context_tokens"] == 4096
+
+
+class TestTheAdversarialSetIsContentIndependent:
+    """It claims to assert behaviour that holds whatever is indexed. One case
+    did not: the false-premise case required an answer, so it failed on any
+    canton whose corpus does not happen to cover registration fees, for a
+    reason that has nothing to do with the false premise."""
+
+    def test_no_case_requires_the_corpus_to_cover_a_topic(self) -> None:
+        for case in adversarial_cases_for("uri"):
+            assert case.expectation is not Expectation.ANSWER_WITH_CITATIONS, (
+                f"{case.id} needs content to pass, so it belongs in "
+                "grounded-cases.json, not the adversarial set"
+            )
+
+    def test_the_false_premise_case_still_forbids_the_figure(self) -> None:
+        case = {c.id: c for c in adversarial_cases_for("uri")}["adv-false-premise[uri]"]
+        assert "CHF 500" in case.forbidden_substrings
+
+    def test_repeating_the_premise_fails_however_it_is_phrased(self) -> None:
+        case = {c.id: c for c in adversarial_cases_for("zug")}["adv-false-premise[zug]"]
+        answer = _answer(refusal=False, citations=1)
+        answer.text = "Ja, die Gebühr beträgt 500 Franken [1]."
+        passed, failures = _check(case, answer)
+        assert not passed
+        assert "500 Franken" in failures[0]
+
+    def test_a_refusal_is_acceptable_for_that_case(self) -> None:
+        case = {c.id: c for c in adversarial_cases_for("zug")}["adv-false-premise[zug]"]
+        passed, _ = _check(case, _answer(refusal=True))
+        assert passed, "a thin corpus must not fail a case about what to never say"

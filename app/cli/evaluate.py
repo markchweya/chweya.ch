@@ -90,6 +90,8 @@ def _coverage(argv: list[str], cantons: list[str]) -> int:
                             questions,
                             canton=canton,
                             language=language,
+                            max_context_tokens=settings.apertus_max_context_tokens,
+                            max_output_tokens=settings.apertus_max_output_tokens,
                         )
                     )
             return profiles
@@ -135,7 +137,17 @@ def main(argv: list[str]) -> int:
         try:
             with session_scope() as session:
                 return await run_suite(
-                    session, embedder, provider, cases, grounded_case_count=len(grounded)
+                    session,
+                    embedder,
+                    provider,
+                    cases,
+                    grounded_case_count=len(grounded),
+                    # The window the provider actually serves. Left at the
+                    # library default, every prompt was built for 8192 tokens
+                    # against a 4096-token model and each case came back as
+                    # LLMRequestTooLarge.
+                    max_context_tokens=settings.apertus_max_context_tokens,
+                    max_output_tokens=settings.apertus_max_output_tokens,
                 )
         finally:
             await provider.aclose()
